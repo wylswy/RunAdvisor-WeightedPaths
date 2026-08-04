@@ -1,0 +1,38 @@
+---
+description: 代码变更完成后同步提交并推送到 GitHub
+alwaysApply: true
+---
+
+# GitHub 同步
+
+用户要求：**每次完成实质性更新后，同步到 GitHub**。
+
+## 远程与分支
+
+- **主远程** `origin` → `https://github.com/wylswy/RunAdvisor-WeightedPaths.git`
+- **默认分支** `main`（GitHub 主页显示）
+- 可选备份远程 `gitee`（用户未要求时不要主动 push）
+
+## 何时同步
+
+在完成以下工作后，**除非用户明确说不要提交**，应 commit + push：
+
+- Mod 功能、评分、JSON、UI 文本等代码/资源改动
+- README、规则、脚本等工程文件改动
+- 版本号 bump（`pom.xml`、`ModTheSpire.json`）
+
+以下情况**不要**仅为同步而提交：纯问答、只读审查、用户说「先别 push」。
+
+## 流程
+
+1. `git status` / `git diff` 确认改动
+2. `git add` 相关文件（勿提交 `target/`、`com/`、临时 scratch）
+3. `git commit -m "..."` — 简短说明「为何改」，与仓库既有风格一致
+4. `git push origin main`
+5. 若 push 因认证失败，告知用户在终端执行 push（凭据已保存在 Git Credential Manager）
+
+## 禁止
+
+- 不要 `git push --force`（除非用户明确要求且理解后果）
+- 不要修改全局 `git config`
+- 不要提交密钥、令牌、本地路径以外的私密信息
