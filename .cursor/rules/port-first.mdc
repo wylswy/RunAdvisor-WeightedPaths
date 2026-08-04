@@ -1,0 +1,26 @@
+---
+description: Mod 与知识库底层逻辑：三端口优先（强制）
+alwaysApply: true
+---
+
+# 端口化优先（底层逻辑）
+
+**一切猎手评分、路线、改分、知识库摘要的底层逻辑都是三端口：**
+
+| 端口 | 标签 |
+|------|------|
+| **DAMAGE** | attack, aoe, dot |
+| **BLOCK** | block |
+| **ENGINE** | draw, energy, discard, engine, retain |
+
+## 强制
+
+1. 改 `silent_cards_a20.json` / `FourLayerScorer` / 路线 Java **之前** Read：  
+   `H:\MyKnowledgeBase\游戏\杀戮尖塔1\猎手\端口化.md`
+2. **禁止**引入或恢复：毒包/刀包/弃牌包、`synergyTag`、`poisonPoints`、`shivPoints`、hasCatalyst combo 倍增、流派 tier 静态推荐
+3. 外部攻略写「毒贼/刀贼/弃牌流」→ 用 `端口化.md` §6 翻译，不得原样进代码
+4. 卡牌前置用 `requiresPort` + `requiresMinPoints`，不用流派 orphan
+
+## 决策一句话
+
+**当前牌组最弱端口 + 规划路线 → 是否补这张牌。**

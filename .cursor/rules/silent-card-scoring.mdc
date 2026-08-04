@@ -1,0 +1,46 @@
+---
+description: 猎手 A20 卡奖评分：纯三端口，无流派
+globs: src/main/resources/card/**,src/main/java/com/derekjass/sts/weightedpaths/card/**
+alwaysApply: false
+---
+
+# 猎手卡奖评分（端口化）
+
+## 必读（改 JSON/Java 前）
+
+1. `H:\MyKnowledgeBase\游戏\杀戮尖塔1\猎手\端口化.md`
+2. `H:\MyKnowledgeBase\游戏\杀戮尖塔1\猎手\设计原则.md`
+3. 工程 `.cursor/rules/port-first.mdc`
+
+## 核心：只有三端口
+
+| 端口 | JSON 标签 | 含义 |
+|------|-----------|------|
+| **DAMAGE** | `attack`, `aoe`, `dot` | 即时伤、群攻、持续伤（含毒） |
+| **BLOCK** | `block` | 格挡 |
+| **ENGINE** | `draw`, `energy`, `discard`, `engine`, `retain` | 抽牌、能量、弃牌触发 |
+
+**禁止**在 Java/JSON 中使用毒包/刀包/弃牌包、`synergyTag`、`poisonPoints`、`shivPoints` 等流派逻辑。
+
+## 动态层（非流派）
+
+- **requiresPort 卡**：催化剂、精准、战术等——端口不足才降分
+- **刀刃之舞**：优质 DAMAGE 过渡，**不设 requiresPort**，可裸抓
+- **layer2**：补最弱端口
+- **transition / future / terminal**：路线与阶段门控
+- **重复抓**：第二张杂技/准备
+- **3楼猫组合**：weak + 杂技 + 精巧 → 一层精英就绪（端口表达，非流派名）
+
+## 设计原则
+
+1. 按**当前牌组三端口 + 规划路线**推荐
+2. 幽魂形态 = `terminal`
+3. 删牌/洁牌 = `removalUrgency()` 污染层
+4. UI 只显示等级/「推荐」
+5. 匕首雨 = modest `transition` + `aoe`
+
+## 公式
+
+```
+最终分 = (baseScore + 生存加成) × 端口 × 端口协同 × 污染
+```

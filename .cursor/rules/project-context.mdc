@@ -1,0 +1,50 @@
+---
+description: Run Advisor 项目上下文、构建部署与开发约定
+alwaysApply: true
+---
+
+# Run Advisor 项目上下文
+
+STS1 Mod（ModTheSpire + BaseMod），modid `WeightedPaths`，玩家名 **Run Advisor**，当前 **1.3.0**。
+
+## 功能范围
+
+- 地图最优路线、节点权重、种子各幕预览
+- **静默猎手 A20** 卡奖评分（S/A/B/C +「推荐」）
+- 动态路线：血量 / 牌组 / 遗物 / 升级后刷新 `PathValuation`
+
+## 关键路径
+
+| 用途 | 路径 |
+|------|------|
+| 卡数据 | `src/main/resources/card/silent_cards_a20.json` |
+| 评分核心 | `card/FourLayerScorer.java`, `CardScorer.java`, `DeckSnapshot.java` |
+| 路线 | `paths/SilentRouteValuation.java`, `RouteSimState.java` |
+| 补丁 | `patches/*.java` |
+| 构建产物 | `target/WeightedPaths.jar` |
+| 本地部署 | `G:\sljt_101046\mods\WeightedPaths-dev.jar` |
+
+## 构建部署
+
+```powershell
+cd C:\STS-Modding\RunAdvisorMod\WeightedPaths
+mvn package -DskipTests
+Copy-Item -Force target\WeightedPaths.jar G:\sljt_101046\mods\WeightedPaths-dev.jar
+```
+
+注意：产物名是 `WeightedPaths.jar`，不是 `WeightedPaths-*.jar`。
+
+## 外部知识库（主库）
+
+用户主知识库：`H:\MyKnowledgeBase\游戏\杀戮尖塔1`
+
+- **入口**：`资料索引.md`（链接 + 分类摘要）
+- 攻略原文、逐卡笔记 → 主库 `猎手/卡牌/`、`待整理/`
+- 改评分前优先读主库；与工程 `docs/AI-KNOWLEDGE.md` 冲突时以主库 + 用户最新指示为准
+
+## 开发约定
+
+- **每次回答前必须先读知识库**（见 `.cursor/rules/knowledge-base-first.mdc`）
+- 玩家可见文本简体中文（见 `chinese-ui.mdc`）
+- **未经用户明确要求不要 git commit**
+- 最小 diff，匹配现有 Java 风格；日志可英文

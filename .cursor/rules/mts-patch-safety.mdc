@@ -1,0 +1,36 @@
+---
+description: ModTheSpire 补丁安全：已知坑与正确 hook 点
+globs: src/main/java/**/patches/**,src/main/java/**/helpers/**
+alwaysApply: false
+---
+
+# MTS 补丁安全
+
+游戏版本参考：`desktop-1.0.jar`（2022-12-18），MTS 3.30+。
+
+## 禁止 / 会崩溃
+
+| 错误写法 | 原因 |
+|----------|------|
+| `AbstractPlayer.upgradeCard` | 方法不存在 |
+| `AbstractPlayer.obtainCard` | 方法不存在 |
+| `@SpirePostfixPatch` on `AbstractCard.upgrade()` | **abstract 方法**，MTS 解析参数 NPE |
+
+## 推荐 hook 点
+
+| 需求 | 补丁目标 |
+|------|----------|
+| 卡牌升级 | `UpgradeSpecificCardAction.update` + `UpgradeRandomCardAction.update`，用 `SpireInsertPatch` 插在 `AbstractCard.superFlash` 调用前 |
+| 主牌组加牌 | `CardGroup.addToBottom` / `addToTop`，判断 `type == MASTER_DECK` |
+| 主牌组删牌 | `CardGroup.removeCard(AbstractCard)`，同上 |
+| 血量变化 | `AbstractPlayer.damage` / `heal` |
+| 金币变化 | `AbstractPlayer.gainGold` / `loseGold` |
+| 静态方法 postfix | **不要** 写 `__instance`；无参或只写原方法参数名；地图节点日志合并进已有 `setCurrMapNode` patch |
+
+## 验证
+
+```powershell
+javap -classpath G:\sljt_101046\desktop-1.0.jar com.megacrit.cardcrawl.characters.AbstractPlayer
+```
+
+改补丁后必须 `mvn package` 并复制 **`target/WeightedPaths.jar`** 到 mods 目录，完全重启 ModTheSpire。

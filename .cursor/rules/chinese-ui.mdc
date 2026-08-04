@@ -1,0 +1,27 @@
+---
+description: RunAdvisorMod / WeightedPaths 面向玩家的 UI 与配置文案一律使用简体中文
+alwaysApply: true
+---
+
+# 中文 UI 规范
+
+本 Mod 所有**玩家可见**文本必须使用简体中文，包括但不限于：
+
+- 地图界面侧边栏、预览、标签、提示
+- Mod 配置面板（ModTheSpire 徽章说明、Toggle 标签）
+- 权重菜单行标签
+- 卡奖/路线建议 UI（后续里程碑）
+
+允许保留的英文/符号：
+
+- 地图节点符号：`M` `?` `E` `R` `$`（与游戏图例一致）
+- 日志（logger）可英文，便于检索
+- 代码标识符、配置 key、Mod ID
+
+新增 UI 时优先复用现有中文措辞：
+
+- 精英 / 休息 / 商店 / 事件 / 怪物
+- 第 N 幕 预览
+- 地图布局固定，房间内容可能变化
+
+工程须 UTF-8 编译：`pom.xml` 已配置 `project.build.sourceEncoding=UTF-8`。
