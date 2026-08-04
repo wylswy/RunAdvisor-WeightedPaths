@@ -2,7 +2,7 @@
   "meta": {
     "character": "Silent",
     "ascensionNote": "A20；纯三端口 DAMAGE/BLOCK/ENGINE，无毒/刀/弃牌流派逻辑",
-    "scoreScale": "0-100；无全局压分；SKIP_THRESHOLD=50",
+    "scoreScale": "0-100；SCORE_CALIBRATION=1.40；SKIP_THRESHOLD=45",
     "portsNote": "DAMAGE=attack|aoe|dot；BLOCK=block；ENGINE=draw|energy|discard|engine|retain",
     "requiresPortNote": "requiresPort+requiresMinPoints：牌组该端口不足则动态降分",
     "kbSources": [

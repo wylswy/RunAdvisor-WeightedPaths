@@ -78,6 +78,15 @@ public class CardRewardRenderPatch {
             }
 
             boolean skipAll = bestScore < com.derekjass.sts.weightedpaths.card.FourLayerScorer.SKIP_THRESHOLD;
+            // 三选一里最高分至少显示 B，避免「全 C 无指引」
+            if (!skipAll && bestCard != null) {
+                CardRecommendation bestRec = scored.get(bestCard);
+                if (bestRec != null && bestRec.grade == com.derekjass.sts.weightedpaths.card.CardGrade.C
+                        && bestScore >= 38.0) {
+                    scored.put(bestCard, new CardRecommendation(
+                            com.derekjass.sts.weightedpaths.card.CardGrade.B, bestRec.score, bestRec.reason));
+                }
+            }
             maybeLogCardReward(__instance, detailed, bestCard, skipAll);
 
             for (AbstractCard card : __instance.rewardGroup) {

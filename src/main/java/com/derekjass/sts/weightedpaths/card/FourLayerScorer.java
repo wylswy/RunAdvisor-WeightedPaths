@@ -8,9 +8,9 @@ import com.megacrit.cardcrawl.cards.AbstractCard;
  */
 public final class FourLayerScorer {
 
-    public static final double SKIP_THRESHOLD = 50.0;
-    /** 1.0 = 不压分；勿再引入全局 ×0.70 一类校准。 */
-    private static final double SCORE_CALIBRATION = 1.0;
+    public static final double SKIP_THRESHOLD = 45.0;
+    /** 补偿历史 ×0.70 压分；最终分 = raw × 此系数（勿低于 1.0）。 */
+    private static final double SCORE_CALIBRATION = 1.40;
     private static final int SILENT_ENGINE_BIAS = 1;
 
     private FourLayerScorer() {
@@ -44,7 +44,15 @@ public final class FourLayerScorer {
         double synergyMult = layer3PortSynergy(card, entry, deck, relics, plan);
         double pollutionMult = layer4Pollution(card, entry, deck, relics);
 
-        double raw = (baseScore + survival.bonus) * portMult * synergyMult * pollutionMult;
+        double combinedMult = portMult * synergyMult * pollutionMult;
+        // 惩罚连乘下限：避免 premium/transition 被乘穿到 C 档
+        double multFloor = 0.72;
+        if (entry.hasTag("premiumTransition") || entry.hasTag("transition") || entry.hasTag("act1Engine")) {
+            multFloor = 0.82;
+        }
+        combinedMult = Math.max(combinedMult, multFloor);
+
+        double raw = (baseScore + survival.bonus) * combinedMult;
         double score = raw * SCORE_CALIBRATION;
         score = Math.max(0.0, Math.min(100.0, score));
 
@@ -236,7 +244,7 @@ public final class FourLayerScorer {
         Port required = entry.requiredPort();
         if (required != null && entry.requiresMinPoints > 0
                 && deck.ports.portPoints(required) < entry.requiresMinPoints) {
-            mult = Math.min(mult, 0.65);
+            mult = Math.min(mult, 0.78);
         }
 
         if (entry.hasTag("scaling") && deck.ports.hasScaling && entry.servesPort(Port.DAMAGE)) {
@@ -284,7 +292,7 @@ public final class FourLayerScorer {
                 mult = Math.max(mult, 1.12);
             }
             if (plan.nextRoomIsElite() || plan.eliteWithin(1)) {
-                mult = Math.min(mult, 0.78);
+                mult = Math.min(mult, 0.88);
             }
         }
 
@@ -316,7 +324,7 @@ public final class FourLayerScorer {
         boolean energyOk = deck.hasEnergySupport || relics.enginePressureReduced;
 
         if (cost >= 2 && deck.averageCost > 1.5 && !energyOk && !entry.hasTag("energy")) {
-            mult *= 0.52;
+            mult *= 0.72;
         }
         if (deck.ports.deckSize >= 18 && !entry.hasTag("scaling") && !entry.hasTag("transition")) {
             mult *= 0.82;
@@ -326,13 +334,13 @@ public final class FourLayerScorer {
         }
         int removalUrgency = deck.removalUrgency();
         if (removalUrgency >= 5 && !entry.hasTag("scaling") && !entry.servesPort(Port.ENGINE)) {
-            mult *= 0.72;
+            mult *= 0.82;
         }
         if (removalUrgency >= 7) {
-            mult *= 0.62;
+            mult *= 0.75;
         }
         if (deck.strikeCount >= 3 && !entry.hasTag("scaling")) {
-            mult *= 0.78;
+            mult *= 0.85;
         }
         if (entry.hasTag("pollution")) {
             mult *= 0.55;
