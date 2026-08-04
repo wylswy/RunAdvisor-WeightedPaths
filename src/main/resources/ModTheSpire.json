@@ -3,7 +3,7 @@
   "name": "Run Advisor",
   "author_list": ["Derek Jass"],
   "description": "Map optimal path (red line), seed act previews, node weights, and Silent A20 card reward recommendations. Fork of Weighted Paths.",
-  "version": "1.4.3",
+  "version": "1.4.4",
   "sts_version": "03-07-2022",
   "mts_version": "3.22.0",
   "dependencies": ["basemod"]

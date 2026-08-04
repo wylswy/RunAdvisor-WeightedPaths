@@ -8,7 +8,8 @@ import com.megacrit.cardcrawl.cards.AbstractCard;
  */
 public final class FourLayerScorer {
 
-    public static final double SKIP_THRESHOLD = 42.0;
+    public static final double SKIP_THRESHOLD = 50.0;
+    /** 1.0 = 不压分；勿再引入全局 ×0.70 一类校准。 */
     private static final double SCORE_CALIBRATION = 1.0;
     private static final int SILENT_ENGINE_BIAS = 1;
 
@@ -189,17 +190,17 @@ public final class FourLayerScorer {
         Port weakest = effectiveWeakestPort(deck.ports, relics, plan);
 
         if (entry.servesPort(weakest)) {
-            mult = weakest == Port.ENGINE ? 1.45 : 1.28;
+            mult = weakest == Port.ENGINE ? 1.60 : 1.35;
         }
 
         if (deck.ports.portPoints(Port.ENGINE) < 2 && entry.servesPort(Port.ENGINE)) {
-            mult = Math.max(mult, 1.45);
+            mult = Math.max(mult, 1.60);
         }
         if (deck.ports.portPoints(Port.BLOCK) < 3 && entry.servesPort(Port.BLOCK)) {
-            mult = Math.max(mult, 1.28);
+            mult = Math.max(mult, 1.35);
         }
         if (deck.ports.portPoints(Port.DAMAGE) < 3 && entry.servesPort(Port.DAMAGE)) {
-            mult = Math.max(mult, 1.28);
+            mult = Math.max(mult, 1.35);
         }
 
         if (plan != null && plan.remainingRunWide.restCount <= 2
@@ -235,7 +236,7 @@ public final class FourLayerScorer {
         Port required = entry.requiredPort();
         if (required != null && entry.requiresMinPoints > 0
                 && deck.ports.portPoints(required) < entry.requiresMinPoints) {
-            mult = Math.min(mult, 0.52);
+            mult = Math.min(mult, 0.65);
         }
 
         if (entry.hasTag("scaling") && deck.ports.hasScaling && entry.servesPort(Port.DAMAGE)) {
@@ -277,7 +278,7 @@ public final class FourLayerScorer {
 
         if (entry.hasTag("future") && plan != null) {
             if (isBareAct1Future(card, entry, deck) && plan.actNumber == 1) {
-                mult = Math.min(mult, 0.75);
+                mult = Math.min(mult, 0.88);
             }
             if (!plan.nextRoomIsElite() && plan.roomsUntilElite > 2) {
                 mult = Math.max(mult, 1.12);
@@ -334,10 +335,10 @@ public final class FourLayerScorer {
             mult *= 0.78;
         }
         if (entry.hasTag("pollution")) {
-            mult *= 0.48;
+            mult *= 0.55;
         }
         if (entry.hasTag("lowValueAttack")) {
-            mult *= 0.48;
+            mult *= 0.55;
         }
         return mult;
     }

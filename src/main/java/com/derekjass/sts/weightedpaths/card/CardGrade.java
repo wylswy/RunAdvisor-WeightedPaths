@@ -14,23 +14,23 @@ public enum CardGrade {
 
 
 
-    /** 校准后分数：好牌约 65–78，神抓 rare 约 80+。 */
+    /** 无全局压分：好牌约 70–90，神抓 rare 约 85+。 */
 
     public static CardGrade fromScore(double score) {
 
-        if (score >= 76.0) {
+        if (score >= 80.0) {
 
             return S;
 
         }
 
-        if (score >= 62.0) {
+        if (score >= 65.0) {
 
             return A;
 
         }
 
-        if (score >= 48.0) {
+        if (score >= 50.0) {
 
             return B;
 
