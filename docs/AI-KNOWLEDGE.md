@@ -48,7 +48,7 @@ WeightedPaths.java          Mod 入口、refreshPathValues()
 
 ### 动态规则
 
-- `requiresPort` + `requiresMinPoints`：前置端口不足 → ×0.52
+- `requiresPort` + `requiresMinPoints`：前置端口不足 → 动态降分（约 ×0.78 下限，见 `FourLayerScorer`）
 - 补最弱端口（layer2）；路线/血线（layer1）；洁牌（layer4）
 - **禁止** poison/shiv/discard 流派计数与 combo 倍增
 
