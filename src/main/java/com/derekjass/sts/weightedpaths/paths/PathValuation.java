@@ -13,7 +13,14 @@ public final class PathValuation {
     }
 
     public static double valuate(Iterable<MapRoomNode> nodes, int actNumber, Map<MapRoomNode, Double> storeGold) {
-        RouteSimState state = RouteSimState.fromCurrentRun();
+        return valuate(nodes, actNumber, storeGold, RouteSimState.fromCurrentRun());
+    }
+
+    /**
+     * 估值入口：接受注入的模拟状态（浅解耦，便于测试与实时重算）。
+     * 原入口 {@link #valuate(Iterable, int, Map)} 内部委托本方法，游戏内行为不变。
+     */
+    public static double valuate(Iterable<MapRoomNode> nodes, int actNumber, Map<MapRoomNode, Double> storeGold, RouteSimState state) {
         double summedValue = 0.0;
         double estimatedGold = state.gold;
         boolean hasMaw = RelicTracker.hasMaw;

@@ -148,6 +148,17 @@ public class MapPath extends LinkedList<MapRoomNode> implements Comparable<MapPa
         return false;
     }
 
+    /** 路径是否经过火堆（休息）房间，符号为 "R"。 */
+    public boolean hasRest() {
+        for (MapRoomNode room : this) {
+            String symbol = room.getRoomSymbol(true);
+            if ("R".equals(symbol)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public int compareTo(MapPath o) {
         return Double.compare(value, o.value);

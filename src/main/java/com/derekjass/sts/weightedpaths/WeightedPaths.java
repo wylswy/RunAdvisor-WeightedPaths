@@ -48,6 +48,9 @@ public class WeightedPaths implements PostInitializeSubscriber {
 
     private static String currentActRouteStats = "";
 
+    /** 低血保命硬规则阈值：血量比例低于此值且地图有火堆时，强制只推荐含火堆的路线。 */
+    private static final double LOW_HP_FORCE_REST_RATIO = 0.30;
+
     private static String getMachineId() {
     	try {
 	    	return InetAddress.getLocalHost().getHostName();
@@ -113,6 +116,16 @@ public class WeightedPaths implements PostInitializeSubscriber {
                     paths = filterPaths.isEmpty() ? paths : filterPaths;
                 }
             }
+            // 低血保命硬规则：血量比例低于阈值且有含火堆的路线时，强制只推荐含火堆的路线。
+            // 过滤后为空（地图无火堆或够不到）则回退原列表，避免无路可走。
+            if (AbstractDungeon.player.currentHealth > 0
+                    && (double) AbstractDungeon.player.currentHealth / AbstractDungeon.player.maxHealth < LOW_HP_FORCE_REST_RATIO) {
+                List<MapPath> restPaths = paths.stream().filter(MapPath::hasRest).collect(Collectors.toList());
+                if (!restPaths.isEmpty()) {
+                    paths = restPaths;
+                    logger.info("Low HP (<30%): forcing routes that include a rest site.");
+                }
+            }
             for (MapPath path : paths) {
                 path.valuate();
                 for (MapRoomNode room : path) {
@@ -145,6 +158,17 @@ public class WeightedPaths implements PostInitializeSubscriber {
             return;
         }
         regeneratePaths();
+    }
+
+    /**
+     * 判断低血保命硬规则是否应生效（可测试的纯判断）。
+     *
+     * @param currentHp 当前血量
+     * @param maxHp     最大血量
+     * @return 血量比例低于阈值时返回 true
+     */
+    public static boolean shouldForceRestRoute(int currentHp, int maxHp) {
+        return maxHp > 0 && currentHp > 0 && (double) currentHp / maxHp < LOW_HP_FORCE_REST_RATIO;
     }
 
     public static void refreshCurrentActRouteDisplay() {

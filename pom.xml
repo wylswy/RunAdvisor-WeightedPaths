@@ -40,6 +40,12 @@
             <scope>system</scope>
             <systemPath>${basedir}/../lib/BaseMod.jar</systemPath>
         </dependency>
+        <dependency>
+            <groupId>junit</groupId>
+            <artifactId>junit</artifactId>
+            <version>4.13.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <properties>
@@ -94,6 +100,20 @@
                         </configuration>
                     </execution>
                 </executions>
+            </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.2</version>
+                <configuration>
+                    <!-- 游戏依赖为 system scope 本地文件，surefire 不将其加入测试 classpath，
+                         这里显式把 jar 文件路径加入测试 classpath，使单测能加载 com.megacrit.cardcrawl.* 类。 -->
+                    <additionalClasspathElements>
+                        <additionalClasspathElement>${basedir}/../lib/desktop-1.0.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${basedir}/../lib/ModTheSpire.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${basedir}/../lib/BaseMod.jar</additionalClasspathElement>
+                    </additionalClasspathElements>
+                </configuration>
             </plugin>
         </plugins>
     </build>

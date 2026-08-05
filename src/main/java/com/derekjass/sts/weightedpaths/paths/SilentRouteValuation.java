@@ -33,7 +33,7 @@ public final class SilentRouteValuation {
     private static final double GOLD_SHOP_THRESHOLD = 300.0;
     private static final double GOLD_SHOP_MULT = 1.5;
     private static final double ACT2_NO_AOE_MONSTER_MULT = 0.5;
-    private static final double NEOW_LAMENT_ELITE_BONUS = 1.0;
+    private static final double NEOW_LAMENT_ELITE_MULT = 2.0;
     private static final double ACT1_ELITE_NOT_READY_MULT = 0.12;
     private static final double ACT1_ELITE_READY_LOW_HP_MULT = 0.35;
     private static final double ACT1_ELITE_READY_OK_MULT = 0.95;
@@ -174,8 +174,11 @@ public final class SilentRouteValuation {
                 }
                 break;
             case "E":
-                if (state.neowLamentBattlesLeft > 0 && state.act1EliteReady && hpRatio >= 0.60) {
-                    weight += NEOW_LAMENT_ELITE_BONUS;
+                boolean neowActive = state.neowLamentBattlesLeft > 0;
+                if (neowActive) {
+                    // 涅奥祝福(前3战敌1血)：白嫖机会，大幅提升精英权重，无需端口就绪/高血量门槛
+                    weight *= NEOW_LAMENT_ELITE_MULT;
+                    detail.addNote("neowLamentElite");
                 }
                 if (relics.blackStar && hpRatio >= 0.45 && state.act1EliteReady) {
                     weight *= 1.20;
@@ -188,7 +191,7 @@ public final class SilentRouteValuation {
                         weight *= ACT1_SECOND_ELITE_MULT;
                         detail.addNote("secondEliteAct1");
                     }
-                    if (!state.act1EliteReady) {
+                    if (!state.act1EliteReady && !neowActive) {
                         weight *= ACT1_ELITE_NOT_READY_MULT;
                         detail.addNote("act1NotReady");
                     } else if (hpRatio < 0.50) {
