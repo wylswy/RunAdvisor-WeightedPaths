@@ -272,6 +272,7 @@ public class WeightedPaths implements PostInitializeSubscriber {
         SeedDecodeHook.initialize();
         ActPreviewRenderer.initialize();
         Config.initialize();
+        logger.info("Run Advisor 1.4.6 更新：① 血量低于30%时优先推荐火堆保命；② 涅奥祝福（前3战敌1血）期间把握白嫖精英机会；③ 一层猎手精英推荐更保守。");
         try {
             initializeSentry();
         } catch (Exception e) {

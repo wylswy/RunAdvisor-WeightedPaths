@@ -93,4 +93,33 @@ public class SilentRouteValuationTest {
         assertTrue("涅奥活跃时精英权重应显著提升: with=" + eliteWithNeow + " without=" + eliteNoNeow,
                 eliteWithNeow >= eliteNoNeow * 1.5);
     }
+
+    /** 构造端口就绪、血量健康的一层状态（act1EliteReady=true）。 */
+    private static RouteSimState stateEliteReadyHealthy() {
+        return new RouteSimState(
+                55, 70,            // 血量 55/70，健康
+                99,                // gold
+                0,                 // neowLamentBattlesLeft
+                0,                 // upgradeNeedCount
+                14,                // deckSize
+                3,                 // strikeCount
+                3,                 // defendCount
+                true,              // hasAoe
+                true,              // act1EliteReady=true：端口就绪
+                10,                // floor（>8，避免 earlyFloor 干扰）
+                1,                 // estimatedRestAhead
+                0,                 // act1ElitesOnPath
+                RouteRelicFlags.none());
+    }
+
+    @Test
+    public void act1EliteWeightLowerThanMonsterEvenWhenReady() {
+        // 猎手一层战力弱小：即使端口就绪、血量健康，精英权重也应低于怪物（避精英）
+        RouteSimState readyHealthy = stateEliteReadyHealthy();
+        double elite = SilentRouteValuation.roomWeight("E", 1, readyHealthy);
+        double monster = SilentRouteValuation.roomWeight("M", 1, readyHealthy);
+
+        assertTrue("一层就绪时精英权重应低于怪物: elite=" + elite + " monster=" + monster,
+                elite < monster);
+    }
 }

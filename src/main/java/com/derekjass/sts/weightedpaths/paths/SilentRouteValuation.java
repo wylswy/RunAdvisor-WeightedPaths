@@ -36,7 +36,8 @@ public final class SilentRouteValuation {
     private static final double NEOW_LAMENT_ELITE_MULT = 2.0;
     private static final double ACT1_ELITE_NOT_READY_MULT = 0.12;
     private static final double ACT1_ELITE_READY_LOW_HP_MULT = 0.35;
-    private static final double ACT1_ELITE_READY_OK_MULT = 0.95;
+    /** 猎手一层战力弱小：即使端口就绪，也按收益/风险对比打折（Q7=b 风险折扣）。 */
+    private static final double ACT1_ELITE_READY_OK_MULT = 0.75;
 
     private static final double ACT1_ELITE_NO_REST_MULT = 0.30;
     private static final double ACT1_ELITE_LOW_HP_MULT = 0.38;
