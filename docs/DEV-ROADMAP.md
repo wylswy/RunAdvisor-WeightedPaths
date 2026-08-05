@@ -84,6 +84,7 @@ git add . ; git commit -m "..." ; git push
 | P1 | `PiercingWail` JSON key | 已与游戏 ID 一致，无需改 |
 | P2 | SpireLogs / 胜率未接入 JSON | 里程碑 M5 |
 | P2 | 卡奖 UI 无分数/理由 | 设计如此，仅 S/A/B/C + 推荐 |
+| P3 | 私有知识库仓库名前导连字符 `-sts1-knowledge-base` | GitHub 自动 301 可用；可选改名去掉连字符（需网页操作，未做）|
 
 ---
 

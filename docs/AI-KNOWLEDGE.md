@@ -8,6 +8,8 @@
 
 对话中可用 `@H:\MyKnowledgeBase\游戏\杀戮尖塔1\README.md` 引用。
 
+**GitHub 只读备份**：`https://github.com/wylswy/-sts1-knowledge-base`（私有，换机 `git clone` 获取；本机改库后推送）。
+
 **用户主知识库（底层逻辑）**：`H:\MyKnowledgeBase\游戏\杀戮尖塔1\猎手\端口化.md`
 
 ---
