@@ -31,6 +31,11 @@ public final class DeckAnalyzer {
         boolean hasScaling = false;
         int deckSize = 0;
         int costSum = 0;
+        // 方向统计（组件一致性）
+        int attackCount = 0;
+        int dotCount = 0;
+        int drawCount = 0;
+        int blockCount = 0;
 
         boolean hasAcrobatics = false;
         boolean hasPrepared = false;
@@ -83,6 +88,19 @@ public final class DeckAnalyzer {
             if (entry.servesPort(Port.ENGINE)) {
                 engine++;
             }
+            // 方向统计（组件一致性）
+            if (entry.hasTag("attack")) {
+                attackCount++;
+            }
+            if (entry.hasTag("dot")) {
+                dotCount++;
+            }
+            if (entry.hasTag("draw") || entry.hasTag("discard")) {
+                drawCount++;
+            }
+            if (entry.hasTag("block")) {
+                blockCount++;
+            }
             if (entry.hasTag("weak")) {
                 weak++;
             }
@@ -99,11 +117,14 @@ public final class DeckAnalyzer {
 
         PortProfile ports = new PortProfile(
                 damage, block, engine, weak, zeroCostAttacks, deckSize, hasAoe, hasScaling);
+        DirectionProfile directions =
+                new DirectionProfile(attackCount, dotCount, drawCount, blockCount);
         double averageCost = deckSize > 0 ? (double) costSum / deckSize : 1.0;
         boolean hasEnergySupport = hasAdrenaline || ENERGY_CARDS.stream()
                 .anyMatch(id -> containsCardId(deck, id));
         return new DeckSnapshot(
                 ports,
+                directions,
                 hasAcrobatics,
                 hasPrepared,
                 hasMasterfulStab,

@@ -80,6 +80,7 @@ public final class CardScorer {
     private static DeckSnapshot withEnergySupport(DeckSnapshot snapshot) {
         return new DeckSnapshot(
                 snapshot.ports,
+                snapshot.directions,
                 snapshot.hasAcrobatics,
                 snapshot.hasPrepared,
                 snapshot.hasMasterfulStab,

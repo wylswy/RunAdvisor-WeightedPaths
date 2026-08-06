@@ -126,6 +126,18 @@ public class WeightedPaths implements PostInitializeSubscriber {
                     logger.info("Low HP (<30%): forcing routes that include a rest site.");
                 }
             }
+            // 涅奥白嫖硬规则：前 N 场战斗敌人 1 血时，只要存在"白嫖窗口内能碰到精英"的路线，
+            // 就强制只从这些路线里选（保证白嫖用到精英，拿遗物+金币）。过滤后为空则回退原列表。
+            int lamentLeft = com.derekjass.sts.weightedpaths.card.SituationalContext.neowLamentBattlesRemaining();
+            if (lamentLeft > 0) {
+                List<MapPath> lamentElitePaths = paths.stream()
+                        .filter(p -> p.hasEliteWithinLament(lamentLeft))
+                        .collect(Collectors.toList());
+                if (!lamentElitePaths.isEmpty()) {
+                    paths = lamentElitePaths;
+                    logger.info("Neow Lament ({} left): forcing routes that reach an elite within lament window.", lamentLeft);
+                }
+            }
             for (MapPath path : paths) {
                 path.valuate();
                 for (MapRoomNode room : path) {

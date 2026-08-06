@@ -159,6 +159,42 @@ public class MapPath extends LinkedList<MapRoomNode> implements Comparable<MapPa
         return false;
     }
 
+    /**
+     * 涅奥祝福(前 N 场战斗敌人 1 血)窗口内能否白嫖到精英。
+     * 战斗位 = 怪物(M)/精英(E)/事件(?)各计一次；休息(R)/商店($)/宝箱(T)不计。
+     * 规则：到达第一个精英 E 之前已发生的战斗数 必须 &lt; 剩余白嫖次数，
+     * 即第一个精英必须在白嫖窗口内遇到（方案 B：只看第一个精英）。
+     */
+    public boolean hasEliteWithinLament(int lamentLeft) {
+        List<String> symbols = new ArrayList<>();
+        for (MapRoomNode room : this) {
+            symbols.add(room.getRoomSymbol(true));
+        }
+        return hasEliteWithinLament(lamentLeft, symbols);
+    }
+
+    /**
+     * 白嫖判定（纯逻辑，接受符号序列，便于单元测试，不依赖游戏房间类）。
+     * @param lamentLeft 剩余白嫖战斗次数
+     * @param symbols 路径的房间符号序列（M/E/?/R/$/T）
+     */
+    static boolean hasEliteWithinLament(int lamentLeft, List<String> symbols) {
+        if (lamentLeft <= 0 || symbols == null) {
+            return false;
+        }
+        int battlesBefore = 0;
+        for (String symbol : symbols) {
+            if ("E".equals(symbol)) {
+                // 到精英前已发生的战斗数 &lt; 剩余白嫖次数 → 能白嫖到这个精英
+                return battlesBefore < lamentLeft;
+            }
+            if ("M".equals(symbol) || "?".equals(symbol)) {
+                battlesBefore++;
+            }
+        }
+        return false;
+    }
+
     @Override
     public int compareTo(MapPath o) {
         return Double.compare(value, o.value);

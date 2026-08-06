@@ -4,6 +4,7 @@ package com.derekjass.sts.weightedpaths.card;
 public final class DeckSnapshot {
 
     public final PortProfile ports;
+    public final DirectionProfile directions;
     public final boolean hasAcrobatics;
     public final boolean hasPrepared;
     public final boolean hasMasterfulStab;
@@ -17,6 +18,7 @@ public final class DeckSnapshot {
 
     public DeckSnapshot(
             PortProfile ports,
+            DirectionProfile directions,
             boolean hasAcrobatics,
             boolean hasPrepared,
             boolean hasMasterfulStab,
@@ -28,6 +30,7 @@ public final class DeckSnapshot {
             int acrobaticsCount,
             int preparedCount) {
         this.ports = ports;
+        this.directions = directions;
         this.hasAcrobatics = hasAcrobatics;
         this.hasPrepared = hasPrepared;
         this.hasMasterfulStab = hasMasterfulStab;

@@ -307,7 +307,33 @@ public final class FourLayerScorer {
             mult = Math.max(mult, 1.22);
         }
 
+        // 组件一致性（白夕）：识别主线方向，同向卡加分，强化主线；
+        // BLOCK 是生存硬底线——方向强化绝不作用于 BLOCK 卡（缺 BLOCK 时保命优先）。
+        String dominant = deck.directions.dominantDirection();
+        if (dominant != null && matchesDirection(entry, dominant) && !entry.hasTag("block")) {
+            mult = Math.max(mult, 1.15);
+        }
+
         return mult;
+    }
+
+    /** 候选卡是否属于指定方向（组件一致性主线）。 */
+    private static boolean matchesDirection(CardStatEntry entry, String direction) {
+        if (entry == null || direction == null) {
+            return false;
+        }
+        switch (direction) {
+            case "attack":
+                return entry.hasTag("attack");
+            case "dot":
+                return entry.hasTag("dot");
+            case "draw":
+                return entry.hasTag("draw") || entry.hasTag("discard");
+            case "block":
+                return entry.hasTag("block");
+            default:
+                return false;
+        }
     }
 
     private static double layer4Pollution(
