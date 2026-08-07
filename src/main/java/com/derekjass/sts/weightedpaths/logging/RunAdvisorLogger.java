@@ -60,7 +60,7 @@ public final class RunAdvisorLogger {
         current.seed = Settings.seed == null ? "" : Settings.seed.toString();
         current.ascension = AbstractDungeon.ascensionLevel;
         current.character = characterName(AbstractDungeon.player);
-        current.meta.put("modVersion", "1.3.2");
+        current.meta.put("modVersion", "1.4.7");
 
         try {
             File dir = logDirectory();

@@ -11,6 +11,7 @@ public class GoldChangedPatches {
 
     @SpirePostfixPatch
     public static void onGoldChanged() {
-        WeightedPaths.refreshPathValues();
+        // P1 修复：复用共享守卫（战斗内不刷 + 500ms 节流），避免每次金币变化全量重算
+        RunStateRefreshPatch.refreshIfInRun();
     }
 }

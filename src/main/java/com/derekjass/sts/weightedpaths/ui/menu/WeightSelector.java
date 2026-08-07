@@ -20,7 +20,9 @@ public class WeightSelector extends ClickableUIElement {
     @Override
     protected void onClick() {
         double inc = isShiftPressed() ? 1.0 : 0.1;
-        WeightedPaths.weights.put(nodeType, WeightedPaths.weights.get(nodeType) + (increase ? inc : -inc));
+        double next = WeightedPaths.weights.get(nodeType) + (increase ? inc : -inc);
+        // U1 修复：权重上下界，防止调到负数/离谱值产生负路线权重
+        WeightedPaths.weights.put(nodeType, Math.max(0.1, Math.min(10.0, next)));
         WeightedPaths.refreshPathValues();
     }
 

@@ -3,6 +3,7 @@ package com.derekjass.sts.weightedpaths.seed;
 import com.derekjass.sts.weightedpaths.paths.OracleMapPath;
 import com.derekjass.sts.weightedpaths.paths.PathSymbolCounts;
 import com.derekjass.sts.weightedpaths.paths.RouteFormatUtil;
+import com.derekjass.sts.weightedpaths.paths.RouteSimState;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -42,8 +43,12 @@ public final class GlobalRunPlanner {
             return;
         }
         HashMap<MapRoomNode, Double> storeGold = new HashMap<>();
+        // S3 修复：当前幕用实时状态，未来幕用基线状态（满血/按幕估算金币），避免跨幕失真
+        RouteSimState state = (act.actNumber == AbstractDungeon.actNum)
+                ? RouteSimState.fromCurrentRun()
+                : RouteSimState.forFutureAct(act.actNumber);
         for (OracleMapPath path : paths) {
-            path.valuate(storeGold, act.actNumber);
+            path.valuate(storeGold, act.actNumber, state);
         }
         paths.sort(Collections.reverseOrder());
         OracleMapPath best = paths.get(0);

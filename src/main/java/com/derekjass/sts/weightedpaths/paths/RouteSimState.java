@@ -45,6 +45,8 @@ public final class RouteSimState {
     public int estimatedRestAhead;
     /** 沿当前评估路径，一层已计数的精英房（用于第二精英重罚）。 */
     public int act1ElitesOnPath;
+    /** R1 修复：模拟死亡标记。血量被打到 ≤0 时置 true，该路线整体判死（PathValuation 返回 -1e6）。 */
+    public boolean dead = false;
     public final RouteRelicFlags relics;
 
     public RouteSimState(
@@ -109,11 +111,38 @@ public final class RouteSimState {
         return new RouteSimState(70, 70, 99, 0, 0, 10, 1, 1, false, false, 1, 0, 0, RouteRelicFlags.none());
     }
 
-    public RouteSimState copy() {
+    /**
+     * S3 修复：未来幕路线的估值基线状态——满血、按幕估算金币、沿用当前牌组/遗物。
+     * 不再继承当前幕已被消耗的血量/金币（避免 Act2/3 预览路线分数随 Act1 状态抖动）。
+     */
+    public static RouteSimState forFutureAct(int actNumber) {
+        if (AbstractDungeon.player == null) {
+            return neutral();
+        }
+        List<AbstractCard> deck = AbstractDungeon.player.masterDeck.group;
+        com.derekjass.sts.weightedpaths.card.DeckSnapshot snapshot =
+                com.derekjass.sts.weightedpaths.card.DeckAnalyzer.analyzeSnapshot(deck);
+        int maxHp = AbstractDungeon.player.maxHealth;
+        int gold = actNumber >= 3 ? 300 : 200;
         return new RouteSimState(
+                maxHp, maxHp, gold, 0,
+                countUpgradeNeed(deck),
+                snapshot.ports.deckSize,
+                snapshot.strikeCount,
+                snapshot.defendCount,
+                SilentRouteValuation.canHandleMultiEnemy(deck),
+                snapshot.act1EliteReady(),
+                1, 0, 0,
+                RouteRelicFlags.fromPlayer());
+    }
+
+    public RouteSimState copy() {
+        RouteSimState s = new RouteSimState(
                 currentHp, maxHp, gold, neowLamentBattlesLeft,
                 upgradeNeedCount, deckSize, strikeCount, defendCount, hasAoe, act1EliteReady,
                 floor, estimatedRestAhead, act1ElitesOnPath, relics);
+        s.dead = dead;
+        return s;
     }
 
     public boolean needsShopRemoval() {
@@ -214,7 +243,13 @@ public final class RouteSimState {
 
     private void applyCombatHpLoss(double fraction) {
         int loss = (int) Math.ceil(maxHp * fraction);
-        currentHp = Math.max(1, currentHp - loss);
+        currentHp -= loss;
+        if (currentHp <= 0) {
+            currentHp = 0;
+            dead = true;
+        } else {
+            currentHp = Math.max(1, currentHp);
+        }
     }
 
     private void healFraction(double fraction) {

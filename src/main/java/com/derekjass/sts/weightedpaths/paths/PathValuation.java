@@ -76,13 +76,17 @@ public final class PathValuation {
                             / (RelicTracker.hasCourier ? 0.8 : 1.0)
                             * SilentRouteValuation.roomWeight(roomSymbol, actNumber, state);
                     estimatedGold = 0.0;
-                    hasMaw = false;
+                    // R6 修复：Maw Bank 每房 +12 与商店无关，商店后不应清空 hasMaw
                     break;
                 default:
                     break;
             }
 
             state.visitRoom(roomSymbol, actNumber);
+        }
+        // R1 修复：模拟中路线会致死 → 整条路线垫底，绝不推荐
+        if (state.dead) {
+            return -1e6;
         }
         return summedValue;
     }

@@ -81,10 +81,25 @@ public class RunStateRefreshPatch {
         }
     }
 
-    private static void refreshIfInRun() {
+    private static long lastRefreshMs = 0L;
+    private static final long REFRESH_DEBOUNCE_MS = 500L;
+
+    /**
+     * P1 修复：战斗内（无屏幕覆盖）不刷新 + 500ms 节流。
+     * 原实现每次 damage/heal/gainGold 都全量重估（含种子 oracle 重算未来幕），一局 348 次。
+     */
+    static void refreshIfInRun() {
         if (AbstractDungeon.player == null || AbstractDungeon.currMapNode == null) {
             return;
         }
+        if (!AbstractDungeon.isScreenUp) {
+            return;
+        }
+        long now = System.currentTimeMillis();
+        if (now - lastRefreshMs < REFRESH_DEBOUNCE_MS) {
+            return;
+        }
+        lastRefreshMs = now;
         WeightedPaths.refreshPathValues();
     }
 }

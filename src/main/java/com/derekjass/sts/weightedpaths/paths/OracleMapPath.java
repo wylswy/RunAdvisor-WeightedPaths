@@ -83,6 +83,11 @@ public class OracleMapPath extends LinkedList<MapRoomNode> implements Comparable
         this.value = PathValuation.valuate(this, actNumber, storeGold);
     }
 
+    /** S3 修复：允许注入估值状态（未来幕用基线状态，当前幕用实时状态）。 */
+    public void valuate(Map<MapRoomNode, Double> storeGold, int actNumber, RouteSimState state) {
+        this.value = PathValuation.valuate(this, actNumber, storeGold, state);
+    }
+
     public double getValue() {
         return value;
     }

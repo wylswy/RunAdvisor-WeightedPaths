@@ -9,8 +9,8 @@ import com.megacrit.cardcrawl.cards.AbstractCard;
 public final class FourLayerScorer {
 
     public static final double SKIP_THRESHOLD = 45.0;
-    /** 补偿历史 ×0.70 压分；最终分 = raw × 此系数（勿低于 1.0）。 */
-    private static final double SCORE_CALIBRATION = 1.40;
+    /** 最终分 = raw × 此系数。B1 修复：1.40→0.90（原值把 baseScore 整体推高 ~40%，~2/3 卡被评 S）。 */
+    private static final double SCORE_CALIBRATION = 0.90;
     private static final int SILENT_ENGINE_BIAS = 1;
 
     private FourLayerScorer() {
@@ -51,6 +51,8 @@ public final class FourLayerScorer {
             multFloor = 0.82;
         }
         combinedMult = Math.max(combinedMult, multFloor);
+        // B1 修复：组合乘子上限，防止端口/方向/校准叠乘把分推到顶格 100
+        combinedMult = Math.min(combinedMult, 1.35);
 
         double raw = (baseScore + survival.bonus) * combinedMult;
         double score = raw * SCORE_CALIBRATION;
@@ -198,23 +200,23 @@ public final class FourLayerScorer {
         Port weakest = effectiveWeakestPort(deck.ports, relics, plan);
 
         if (entry.servesPort(weakest)) {
-            mult = weakest == Port.ENGINE ? 1.60 : 1.35;
+            mult = weakest == Port.ENGINE ? 1.35 : 1.20;
         }
 
         if (deck.ports.portPoints(Port.ENGINE) < 2 && entry.servesPort(Port.ENGINE)) {
-            mult = Math.max(mult, 1.60);
+            mult = Math.max(mult, 1.35);
         }
         if (deck.ports.portPoints(Port.BLOCK) < 3 && entry.servesPort(Port.BLOCK)) {
-            mult = Math.max(mult, 1.35);
+            mult = Math.max(mult, 1.20);
         }
         if (deck.ports.portPoints(Port.DAMAGE) < 3 && entry.servesPort(Port.DAMAGE)) {
-            mult = Math.max(mult, 1.35);
+            mult = Math.max(mult, 1.20);
         }
 
         if (plan != null && plan.remainingRunWide.restCount <= 2
                 && plan.remainingRunWide.eliteCount >= 3
                 && entry.servesPort(Port.BLOCK)) {
-            mult = Math.max(mult, 1.35);
+            mult = Math.max(mult, 1.20);
         }
 
         if (plan != null && plan.phase == GlobalRunPlan.RunPhase.LATE
@@ -311,7 +313,7 @@ public final class FourLayerScorer {
         // BLOCK 是生存硬底线——方向强化绝不作用于 BLOCK 卡（缺 BLOCK 时保命优先）。
         String dominant = deck.directions.dominantDirection();
         if (dominant != null && matchesDirection(entry, dominant) && !entry.hasTag("block")) {
-            mult = Math.max(mult, 1.15);
+            mult = Math.max(mult, 1.10);
         }
 
         return mult;
