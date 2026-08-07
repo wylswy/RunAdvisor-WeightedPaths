@@ -25,9 +25,13 @@ public final class DirectionProfile {
         this.blockCount = blockCount;
     }
 
-    /** 当前最厚的方向（组件一致性主线）。平局时返回 null，避免误判。 */
+    /**
+     * 当前最厚的"主攻方向"（组件一致性主线）。平局时返回 null，避免误判。
+     * 主攻方向只考虑 attack / dot / draw——block 是防御，不参与"主攻方向"判定，
+     * 靠 layer2 补弱端口（BLOCK < 3 → ×1.35）保证，避免 block 主线时方向强化死分支。
+     */
     public String dominantDirection() {
-        int max = Math.max(attackCount, Math.max(dotCount, Math.max(drawCount, blockCount)));
+        int max = Math.max(attackCount, Math.max(dotCount, drawCount));
         if (max <= 0) {
             return null;
         }
@@ -44,10 +48,6 @@ public final class DirectionProfile {
         if (drawCount == max) {
             count++;
             best = "draw";
-        }
-        if (blockCount == max) {
-            count++;
-            best = "block";
         }
         // 平局时不确定主线，不强化
         return count == 1 ? best : null;

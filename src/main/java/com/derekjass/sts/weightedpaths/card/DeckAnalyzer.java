@@ -88,17 +88,15 @@ public final class DeckAnalyzer {
             if (entry.servesPort(Port.ENGINE)) {
                 engine++;
             }
-            // 方向统计（组件一致性）
+            // 方向统计（组件一致性）——一张卡只算一个主方向，避免多标签重复计数污染画像。
+            // 优先级：attack > dot > draw > block（主攻方向优先，block 靠补弱端口保证）。
             if (entry.hasTag("attack")) {
                 attackCount++;
-            }
-            if (entry.hasTag("dot")) {
+            } else if (entry.hasTag("dot")) {
                 dotCount++;
-            }
-            if (entry.hasTag("draw") || entry.hasTag("discard")) {
+            } else if (entry.hasTag("draw") || entry.hasTag("discard")) {
                 drawCount++;
-            }
-            if (entry.hasTag("block")) {
+            } else if (entry.hasTag("block")) {
                 blockCount++;
             }
             if (entry.hasTag("weak")) {
