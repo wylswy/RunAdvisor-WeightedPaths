@@ -14,18 +14,14 @@ import com.derekjass.sts.weightedpaths.seed.SeedDecodeHook;
 import com.derekjass.sts.weightedpaths.ui.path.ActPreviewRenderer;
 import com.derekjass.sts.weightedpaths.ui.path.BestPathRenderer;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
-import com.evacipated.cardcrawl.modthespire.Loader;
 import com.evacipated.cardcrawl.modthespire.lib.SpireInitializer;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
 import com.megacrit.cardcrawl.map.MapRoomNode;
-import io.sentry.Sentry;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -38,8 +34,7 @@ public class WeightedPaths implements PostInitializeSubscriber {
     private static final Logger logger = LogManager.getLogger(WeightedPaths.class.getName());
 
     private static List<MapPath> paths = new ArrayList<>();
-    private static final String machineId = getMachineId();
-	   
+
     public static final Map<String, Double> weights = new HashMap<>();
     public static final Map<MapRoomNode, Double> roomValues = new HashMap<>();
     public static final Map<MapRoomNode, Double> storeGold = new HashMap<>();
@@ -51,16 +46,6 @@ public class WeightedPaths implements PostInitializeSubscriber {
     /** 低血保命硬规则阈值：血量比例低于此值且地图有火堆时，强制只推荐含火堆的路线。 */
     private static final double LOW_HP_FORCE_REST_RATIO = 0.30;
 
-    private static String getMachineId() {
-    	try {
-	    	return InetAddress.getLocalHost().getHostName();
-	    }
-	    catch (Exception E) {
-	        System.err.println(E.getMessage());
-	    }
-		return null;
-    }
-    
     private WeightedPaths() {
         BaseMod.subscribe(this);
     }
@@ -110,7 +95,7 @@ public class WeightedPaths implements PostInitializeSubscriber {
             logger.info("Evaluating paths.");
             if (Config.forceEmerald() && !Settings.hasEmeraldKey && AbstractDungeon.actNum == 3) {
                 if (AbstractDungeon.getCurrMapNode() == null) {
-                    Sentry.captureMessage("In act 3 and current map node is null.");
+                    logger.warn("In act 3 and current map node is null.");
                 } else if (!AbstractDungeon.getCurrMapNode().hasEmeraldKey) {
                     List<MapPath> filterPaths = paths.stream().filter(MapPath::hasEmerald).collect(Collectors.toList());
                     paths = filterPaths.isEmpty() ? paths : filterPaths;
@@ -249,30 +234,6 @@ public class WeightedPaths implements PostInitializeSubscriber {
         }
     }
 
-    private static void initializeSentry() {
-        Sentry.init(options -> {
-            options.setEnableExternalConfiguration(true);
-            options.addInAppInclude("com.derekjass.sts.weightedpaths");
-            options.setBeforeSend((event, hint) -> {
-                event.setServerName(machineId);
-                boolean sendToSentry = true;
-                if (event.getThrowable() != null) {
-                    sendToSentry = false;
-                    for (StackTraceElement ste : event.getThrowable().getStackTrace()) {
-                        if (ste.getClassName().startsWith("com.derekjass.sts.weightedpaths")) {
-                            sendToSentry = true;
-                            break;
-                        }
-                    }
-                }
-                return sendToSentry ? event : null;
-            });
-        });
-        Sentry.setExtra("loaded-mods",
-                Arrays.stream(Loader.MODINFOS).map(modInfo -> modInfo.Name).collect(Collectors.toList()).toString());
-        Sentry.startSession();
-    }
-
     @Override
     public void receivePostInitialize() {
         initializeWeights();
@@ -285,10 +246,5 @@ public class WeightedPaths implements PostInitializeSubscriber {
         ActPreviewRenderer.initialize();
         Config.initialize();
         logger.info("Run Advisor 1.4.6 更新：① 血量低于30%时优先推荐火堆保命；② 涅奥祝福（前3战敌1血）期间把握白嫖精英机会；③ 一层猎手精英推荐更保守。");
-        try {
-            initializeSentry();
-        } catch (Exception e) {
-            logger.error("Sentry init failed; map advisor still active.", e);
-        }
     }
 }
