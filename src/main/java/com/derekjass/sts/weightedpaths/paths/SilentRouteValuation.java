@@ -30,6 +30,21 @@ public final class SilentRouteValuation {
 
     private static final double HP_REST_BOOST_THRESHOLD = 0.35;
     private static final double HP_REST_BOOST_MULT = 2.0;
+
+    // 血线阈值（审查#7 统一散落魔法数字，值不变，纯可读性/可维护性）
+    /** 血线 ≤ 此值：怪物房间权重 ×0.70（低血避战）。 */
+    private static final double HP_LOW_MONSTER_THRESHOLD = 0.40;
+    /** 血线 ≥ 此值且需敲牌：火堆/精英加成条件。 */
+    private static final double HP_UPGRADE_GOOD = 0.45;
+    /** 血线 ≤ 此值：精英低血惩罚、商店 MealTicket、事件等共用。 */
+    private static final double HP_MID = 0.50;
+    /** 血线 ≥ 此值：一层火堆敲牌 / 二层精英加成。 */
+    private static final double HP_REST_ACT1 = 0.55;
+    /** 血线 < 此值：二层/三层精英与怪物强惩罚。 */
+    private static final double HP_HIGH = 0.65;
+    /** 血线 < 此值：一层精英低血额外惩罚。 */
+    private static final double HP_ELITE_LOW = 0.70;
+
     private static final double GOLD_SHOP_THRESHOLD = 300.0;
     private static final double GOLD_SHOP_MULT = 1.5;
     private static final double ACT2_NO_AOE_MONSTER_MULT = 0.5;
@@ -134,11 +149,11 @@ public final class SilentRouteValuation {
                 }
                 if (hpRatio < HP_REST_BOOST_THRESHOLD) {
                     weight *= HP_REST_BOOST_MULT;
-                } else if (state.needsUpgrade() && hpRatio >= 0.45 && act <= 2) {
+                } else if (state.needsUpgrade() && hpRatio >= HP_UPGRADE_GOOD && act <= 2) {
                     weight *= 1.45;
                 } else if (relics.coffeeDripper && state.needsUpgrade()) {
                     weight *= 1.35;
-                } else if (act == 1 && state.needsUpgrade() && hpRatio >= 0.55) {
+                } else if (act == 1 && state.needsUpgrade() && hpRatio >= HP_REST_ACT1) {
                     weight *= 1.25;
                 }
                 break;
@@ -159,7 +174,7 @@ public final class SilentRouteValuation {
                 if (relics.smilingMask && state.deckSize >= 14) {
                     weight *= 1.25;
                 }
-                if (relics.mealTicket && hpRatio < 0.50) {
+                if (relics.mealTicket && hpRatio < HP_MID) {
                     weight *= 1.20;
                 }
                 break;
@@ -167,10 +182,10 @@ public final class SilentRouteValuation {
                 if (act == 2 && !state.hasAoe) {
                     weight *= ACT2_NO_AOE_MONSTER_MULT;
                 }
-                if (hpRatio < 0.40) {
+                if (hpRatio < HP_LOW_MONSTER_THRESHOLD) {
                     weight *= 0.70;
                 }
-                if (act >= 3 && hpRatio < 0.65) {
+                if (act >= 3 && hpRatio < HP_HIGH) {
                     weight *= 0.55;
                 }
                 break;
@@ -181,10 +196,10 @@ public final class SilentRouteValuation {
                     weight *= NEOW_LAMENT_ELITE_MULT;
                     detail.addNote("neowLamentElite");
                 }
-                if (relics.blackStar && hpRatio >= 0.45 && state.act1EliteReady) {
+                if (relics.blackStar && hpRatio >= HP_UPGRADE_GOOD && state.act1EliteReady) {
                     weight *= 1.20;
                 }
-                if (relics.preservedInsect && act <= 2 && hpRatio >= 0.40 && state.act1EliteReady) {
+                if (relics.preservedInsect && act <= 2 && hpRatio >= HP_LOW_MONSTER_THRESHOLD && state.act1EliteReady) {
                     weight *= 1.15;
                 }
                 if (act == 1) {
@@ -195,10 +210,10 @@ public final class SilentRouteValuation {
                     if (!state.act1EliteReady && !neowActive) {
                         weight *= ACT1_ELITE_NOT_READY_MULT;
                         detail.addNote("act1NotReady");
-                    } else if (hpRatio < 0.50) {
+                    } else if (hpRatio < HP_MID) {
                         weight *= ACT1_ELITE_READY_LOW_HP_MULT;
                         detail.addNote("act1ReadyLowHp");
-                    } else if (hpRatio < 0.65) {
+                    } else if (hpRatio < HP_HIGH) {
                         weight *= 0.78;
                         detail.addNote("act1ReadyMidHp");
                     } else {
@@ -208,7 +223,7 @@ public final class SilentRouteValuation {
                         weight *= 0.72;
                         detail.addNote("deckSmall");
                     }
-                    if (hpRatio < 0.70) {
+                    if (hpRatio < HP_ELITE_LOW) {
                         weight *= ACT1_ELITE_LOW_HP_MULT;
                         detail.addNote("hpBelow70");
                     }
@@ -222,14 +237,14 @@ public final class SilentRouteValuation {
                     }
                 } else if (hpRatio < HP_REST_BOOST_THRESHOLD) {
                     weight *= 0.55;
-                } else if (act == 2 && hpRatio < 0.55) {
+                } else if (act == 2 && hpRatio < HP_REST_ACT1) {
                     weight *= 0.45;
                 }
                 break;
             case "?":
                 if (act == 1) {
-                    weight *= hpRatio < 0.55 ? 0.62 : 0.82;
-                } else if (act == 2 && hpRatio < 0.50) {
+                    weight *= hpRatio < HP_REST_ACT1 ? 0.62 : 0.82;
+                } else if (act == 2 && hpRatio < HP_MID) {
                     weight *= 1.15;
                 }
                 break;
