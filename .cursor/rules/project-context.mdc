@@ -39,7 +39,7 @@ Copy-Item -Force target\WeightedPaths.jar G:\sljt_101046\mods\WeightedPaths-dev.
 用户主知识库：`H:\MyKnowledgeBase\游戏\杀戮尖塔1`
 
 - **入口**：`资料索引.md`（链接 + 分类摘要）
-- 攻略原文、逐卡笔记 → 主库 `猎手/卡牌/`、`待整理/`
+- 攻略原文、逐卡笔记 → 主库 `1_背景与玩法/静默猎手/卡牌/`、`待整理/`
 - 改评分前优先读主库；与工程 `docs/AI-KNOWLEDGE.md` 冲突时以主库 + 用户最新指示为准
 
 ## 开发约定

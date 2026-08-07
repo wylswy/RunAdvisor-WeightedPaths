@@ -118,7 +118,7 @@ Copy-Item -Force target\WeightedPaths.jar G:\sljt_101046\mods\WeightedPaths-dev.
 
 ## 8. 扩展知识库时
 
-1. 新结论 → 先写进 `猎手/端口化.md`，再改 JSON/Java
+1. 新结论 → 先写进 `1_背景与玩法/静默猎手/端口化.md`，再改 JSON/Java
 2. 新设计原则 → 更新 `.cursor/rules/silent-card-scoring.mdc`
 3. 新补丁模式 → 更新 `mts-patch-safety.mdc`
 4. 在 JSON `meta.ascensionNote` 可简短注明校准来源

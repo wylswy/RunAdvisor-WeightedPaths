@@ -9,21 +9,21 @@ alwaysApply: true
 
 ## 必读入口（按顺序）
 
-1. `H:\MyKnowledgeBase\游戏\杀戮尖塔1\猎手\端口化.md` — **底层逻辑（三端口）**
-2. `H:\MyKnowledgeBase\游戏\杀戮尖塔1\资料索引.md` — 总目录
-3. 若改分 / 卡牌：`猎手/设计原则.md` + 工程 `.cursor/rules/port-first.mdc`
-4. 若 MTS 补丁：`Mod开发/README.md` + `mts-patch-safety.mdc`
-5. 若地图 / 种子：`地图与种子/README.md`
+1. `H:\MyKnowledgeBase\游戏\杀戮尖塔1\1_背景与玩法\静默猎手\端口化.md` — **底层逻辑（三端口）**
+2. `H:\MyKnowledgeBase\游戏\杀戮尖塔1\资料索引.md` — 总目录（三层：1_背景玩法 / 2_游戏机制 / 3_代码算法）
+3. 若改分 / 卡牌：`1_背景与玩法\静默猎手\设计原则.md` + 工程 `.cursor/rules/port-first.mdc`
+4. 若 MTS 补丁：`3_代码与算法\Mod开发\README.md` + `mts-patch-safety.mdc`
+5. 若地图 / 种子：`2_游戏机制\地图与种子\README.md`
 6. 工程速查：`docs/AI-KNOWLEDGE.md`
 
 ## 按话题追加阅读
 
 | 用户话题 | 额外读取 |
 |----------|----------|
-| 某张猎手卡 | `猎手/卡牌/Labo-单卡锚点.md`、模板 |
-| 路线 / 一层 | `猎手/路线.md` |
-| BOSS / Act3 | `通用/三层BOSS.md` |
-| 数据 / 胜率 | `数据与统计/README.md` |
+| 某张猎手卡 | `1_背景与玩法\静默猎手\卡牌\Labo-单卡锚点.md`、模板 |
+| 路线 / 一层 | `1_背景与玩法\静默猎手\路线.md` |
+| BOSS / Act3 | `1_背景与玩法\三层BOSS.md` |
+| 数据 / 胜率 | `2_游戏机制\数据与统计\README.md` |
 
 ## 执行要求
 

@@ -54,9 +54,11 @@ git init
 git add .
 git commit -m "Initial commit: STS1 Silent A20 knowledge base"
 git branch -M main
-git remote add origin https://github.com/wylswy/sts1-knowledge-base.git
+git remote add origin https://github.com/wylswy/-sts1-knowledge-base.git
 git push -u origin main
 ```
+
+> 注意：私有仓库名带前导连字符 `-sts1-knowledge-base`（GitHub 自动 301 可用）。
 
 GitHub 上先建**空仓库**（不要勾选 README）。
 
@@ -71,7 +73,7 @@ GitHub 上先建**空仓库**（不要勾选 README）。
 git add . ; git commit -m "..." ; git push
 ```
 
-同步 `.txt`：`.\sync-md-to-txt.ps1`
+> 注：2026-08-07 起**不再维护 .txt 副本**（已删 `sync-md-to-txt.ps1`），只维护 `.md` + `资料索引.md`；自动推送已停，改后手动 push。
 
 ---
 
