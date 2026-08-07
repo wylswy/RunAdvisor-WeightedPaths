@@ -31,9 +31,10 @@ public class DirectionProfileTest {
     }
 
     @Test
-    public void blockDominantWhenMostBlockCards() {
+    public void blockDominantReturnsNullBecauseBlockNotMainDirection() {
+        // block 最多，但主线只从 attack/dot/draw 里选（block 靠 layer2 补弱端口保证，不参与主线强化）
         DirectionProfile d = new DirectionProfile(1, 1, 1, 3);
-        assertEquals("block", d.dominantDirection());
+        assertNull(d.dominantDirection());
     }
 
     @Test
