@@ -5,6 +5,7 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.derekjass.sts.weightedpaths.card.CardRecommendation;
 import com.derekjass.sts.weightedpaths.card.CardScorer;
 import com.derekjass.sts.weightedpaths.card.GlobalRunPlan;
+import com.derekjass.sts.weightedpaths.creative.CardAttitudeEngine;
 import com.derekjass.sts.weightedpaths.logging.RunAdvisorLogger;
 import com.derekjass.sts.weightedpaths.logging.RunLogModels;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
@@ -30,6 +31,8 @@ public class CardRewardRenderPatch {
     private static final Color GRADE_C = new Color(0.95f, 0.45f, 0.45f, 1.0f);
     private static final Color RECOMMENDED_COLOR = new Color(0.35f, 1.0f, 0.55f, 1.0f);
     private static final Color SKIP_HINT_COLOR = new Color(1.0f, 0.72f, 0.35f, 1.0f);
+    // 卡的态度台词颜色（暖黄，区别于评分文字）
+    private static final Color ATTITUDE_COLOR = new Color(0.98f, 0.82f, 0.35f, 1.0f);
     // 抓牌历史"已有 N 张"的次要文字色
     private static final Color HAVING_COLOR = new Color(0.78f, 0.78f, 0.78f, 1.0f);
     private static String lastRewardLogKey = "";
@@ -37,6 +40,12 @@ public class CardRewardRenderPatch {
     private static java.util.Set<String> lastRewardCardIds = new java.util.HashSet<>();
     /** 卡奖出现时玩家牌组各卡数量（供 onClose 对比新增）。 */
     private static java.util.Map<String, Integer> lastDeckCountBefore = new java.util.HashMap<>();
+    /** 本次卡奖推荐抓的卡 ID（供 onClose 检测违背）。 */
+    private static String lastRecommendedId = "";
+    /** 本次卡奖是否推荐整次跳过。 */
+    private static boolean lastSkipAll = false;
+    /** 本次卡奖各候选卡的 grade（供 onClose 判断弃高抓低）。 */
+    private static final java.util.Map<String, String> lastRewardGrades = new java.util.HashMap<>();
 
     public static void resetRewardLogCache() {
         lastRewardLogKey = "";
@@ -110,6 +119,11 @@ public class CardRewardRenderPatch {
             if (skipAll) {
                 drawSkipHint(sb);
             }
+
+            // 卡的态度：显示上一次卡奖违背推荐时留下的台词
+            if (CardAttitudeEngine.hasDisplay()) {
+                drawAttitudeLine(sb, CardAttitudeEngine.displayLine());
+            }
         }
     }
 
@@ -149,6 +163,20 @@ public class CardRewardRenderPatch {
                 }
             }
         }
+        // 记录推荐信息（供 onClose 检测玩家是否违背）；并推进「卡的态度」台词显示
+        lastRecommendedId = bestCard == null ? "" : bestCard.cardID;
+        lastSkipAll = skipAll;
+        lastRewardGrades.clear();
+        for (AbstractCard card : screen.rewardGroup) {
+            if (card == null) {
+                continue;
+            }
+            CardScorer.ScoredResult r = detailed.get(card);
+            if (r != null) {
+                lastRewardGrades.put(card.cardID, r.recommendation.grade.name());
+            }
+        }
+        CardAttitudeEngine.advanceForNewReward();
 
         java.util.ArrayList<RunLogModels.CardChoiceLog> choices = new java.util.ArrayList<>();
         int index = 0;
@@ -223,6 +251,20 @@ public class CardRewardRenderPatch {
                 sb, FontHelper.cardTitleFont, CardUiStrings.SKIP_ALL_HINT, cx, cy, SKIP_HINT_COLOR);
     }
 
+    /** 在卡奖界面顶部绘制卡的态度台词（暖黄色，醒目）。 */
+    private static void drawAttitudeLine(SpriteBatch sb, String text) {
+        if (text == null || text.isEmpty()) {
+            return;
+        }
+        float cx = Settings.WIDTH / 2.0f;
+        float cy = Settings.HEIGHT - (120.0f * Settings.scale);
+        if (ModFonts.header != null) {
+            FontHelper.renderFontCentered(sb, ModFonts.header, text, cx, cy, ATTITUDE_COLOR);
+        } else {
+            FontHelper.renderFontCentered(sb, FontHelper.cardTitleFont, text, cx, cy, ATTITUDE_COLOR);
+        }
+    }
+
     private static Color gradeColor(com.derekjass.sts.weightedpaths.card.CardGrade grade) {
         switch (grade) {
             case S:
@@ -241,11 +283,18 @@ public class CardRewardRenderPatch {
     public static class PostClosePatch {
         @SpirePostfixPatch
         public static void afterClose(CardRewardScreen __instance) {
-            if (!RunAdvisorLogger.isEnabled() || AbstractDungeon.player == null) {
+            if (AbstractDungeon.player == null) {
                 return;
             }
             String chosen = resolveChosenFromDeck();
-            RunAdvisorLogger.logPlayerCardChoice(chosen, chosen.isEmpty());
+            if (RunAdvisorLogger.isEnabled()) {
+                RunAdvisorLogger.logPlayerCardChoice(chosen, chosen.isEmpty());
+            }
+            // 卡的态度：检测本次卡奖是否违背推荐，生成待显示台词
+            String chosenGrade = (chosen == null || chosen.isEmpty())
+                    ? "" : lastRewardGrades.getOrDefault(chosen, "");
+            CardAttitudeEngine.evaluateReward(
+                    lastRecommendedId, lastSkipAll, chosen, chosen.isEmpty(), chosenGrade);
         }
     }
 
