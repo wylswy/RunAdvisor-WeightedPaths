@@ -38,3 +38,17 @@ help_pom.txt
 
 # Optional: keep Cursor rules in repo (project conventions)
 # .cursor/ is included intentionally
+
+# Runtime cache
+**/__pycache__/
+*.pyc
+
+# Scratch fetch data (temp, not project source)
+研究草稿/
+
+# Experimental AI-setup scripts (local convenience, not project source)
+scripts/codex-deepseek-setup-en.ps1
+scripts/启动Claude-DeepSeek.bat
+scripts/启动Codex-DeepSeek.bat
+scripts/启动Hermes-DeepSeek.bat
+scripts/配置Codex-DeepSeek.bat
