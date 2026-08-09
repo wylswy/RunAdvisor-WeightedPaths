@@ -79,8 +79,10 @@ public final class DeckAnalyzer {
             if (entry == null) {
                 continue;
             }
+            // DAMAGE 质量加权：高质量输出卡（baseScore≥60，如玻璃刀/刀刃之舞/冲刺）按 2 点计，
+            // 避免"强输出但张数少"被 weakestPort 误判为输出不足而推荐毒/废攻击卡。
             if (entry.servesPort(Port.DAMAGE)) {
-                damage++;
+                damage += entry.baseScore >= 60 ? 2 : 1;
             }
             if (entry.servesPort(Port.BLOCK)) {
                 block++;

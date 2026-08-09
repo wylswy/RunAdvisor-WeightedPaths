@@ -24,6 +24,8 @@ Desktop.ini
 # Logs / local runs
 *.log
 RunAdvisorLogs/
+# 游戏运行时日志（每次运行生成，不进 git）
+sendToDevs/
 
 # Build / deploy artifacts (jar built locally)
 *.jar

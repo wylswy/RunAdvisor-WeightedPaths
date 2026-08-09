@@ -38,6 +38,10 @@ public final class FourLayerScorer {
         if (card == null) {
             return new DetailedResult(new CardRecommendation(CardGrade.C, 0.0, ""), null);
         }
+        // 修复：entry 可能为 null（卡不在 JSON 里），避免 NPE 闪退
+        if (entry == null) {
+            return new DetailedResult(new CardRecommendation(CardGrade.C, 0.0, ""), null);
+        }
 
         LayerResult survival = layer1Survival(card, entry, deck, situational, plan);
         double portMult = layer2Port(entry, deck, relics, plan);
@@ -251,6 +255,12 @@ public final class FourLayerScorer {
 
         if (entry.hasTag("scaling") && deck.ports.hasScaling && entry.servesPort(Port.DAMAGE)) {
             mult = Math.max(mult, 1.15);
+        }
+
+        // 余像 After Image：BLOCK scaling，每打一张牌触发格挡。攻击卡多时每张攻击都附加格挡，
+        // 价值随攻击密度提升（DAMAGE 协同，端口化表达，非流派）。刀舞等产 0 费攻击更放大此效果。
+        if ("After Image".equals(cardId) && deck.ports.damagePoints >= 3) {
+            mult = Math.max(mult, 1.18);
         }
 
         if (entry.hasTag("dot") && entry.hasTag("scaling") && deck.ports.damagePoints == 0) {
