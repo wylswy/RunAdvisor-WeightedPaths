@@ -23,9 +23,11 @@ public final class SilentRouteValuation {
     private static final double BASE_TREASURE = 4.0;
 
     private static final double[] ELITE_ACT = {0.42, 0.5, 1.0};
-    private static final double[] MONSTER_ACT = {1.48, 0.6, 0.4};
-    private static final double[] EVENT_ACT = {0.65, 1.3, 1.1};
-    private static final double[] SHOP_ACT = {0.85, 1.3, 1.2};
+    // 一层权重（用户 2026-08-09 定稿）：火堆≈商店 > 小怪 > 事件 > 精英
+    // 一层基础值：R=10.85, $=10.0, M≈7.98, ?=6.0, E=3.78, T=4.0
+    private static final double[] MONSTER_ACT = {1.14, 0.6, 0.4};
+    private static final double[] EVENT_ACT = {1.2, 1.3, 1.1};
+    private static final double[] SHOP_ACT = {1.25, 1.3, 1.2};
     private static final double[] REST_ACT = {1.55, 1.0, 0.8};
 
     private static final double HP_REST_BOOST_THRESHOLD = 0.35;

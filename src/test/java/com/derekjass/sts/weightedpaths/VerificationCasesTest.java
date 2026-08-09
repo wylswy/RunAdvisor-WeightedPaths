@@ -40,11 +40,12 @@ public class VerificationCasesTest {
     public void act1BaseWeightsMatchDocumentation() {
         RouteSimState state = neutralState();
         // 用 roomWeightDetailed().baseWeight 取纯基础分（不含动态修正/menuMult）
+        // 一层权重（用户 2026-08-09 定稿）：火堆≈商店 > 小怪 > 事件 > 精英
         assertClose("精英 E 应≈3.78", 3.78, baseWeight("E", state));
-        assertClose("怪物 M 应≈10.36", 10.36, baseWeight("M", state));
+        assertClose("怪物 M 应≈7.98", 7.98, baseWeight("M", state));
         assertClose("休息 R 应≈10.85", 10.85, baseWeight("R", state));
-        assertClose("商店 $ 应≈6.80", 6.80, baseWeight("$", state));
-        assertClose("事件 ? 应≈3.25", 3.25, baseWeight("?", state));
+        assertClose("商店 $ 应≈10.00", 10.00, baseWeight("$", state));
+        assertClose("事件 ? 应≈6.00", 6.00, baseWeight("?", state));
         assertClose("宝箱 T 应=4.00", 4.00, baseWeight("T", state));
     }
 

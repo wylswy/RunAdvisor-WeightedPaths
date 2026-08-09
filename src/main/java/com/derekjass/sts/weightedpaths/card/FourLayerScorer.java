@@ -286,9 +286,9 @@ public final class FourLayerScorer {
 
         if (entry.hasTag("terminal")) {
             if ("Wraith Form v2".equals(cardId)) {
-                if (plan != null && plan.phase == GlobalRunPlan.RunPhase.EARLY) {
-                    mult *= 0.52;
-                } else if (deck.ports.blockPoints >= 3) {
+                // 幽魂形态 = 保命神卡（白夕 S 级 terminal），任何阶段含一层都值得，
+                // 不再因早期阶段大幅砍分（用户 2026-08-09：不应被杂技压过）。
+                if (deck.ports.blockPoints >= 3) {
                     mult = Math.max(mult, 1.22);
                 }
             } else if (plan != null && plan.phase == GlobalRunPlan.RunPhase.LATE) {

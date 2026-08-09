@@ -76,7 +76,7 @@
 
     "Adrenaline": { "baseScore": 84, "tags": ["energy", "scaling", "engine"] },
     "Bullet Time": { "baseScore": 52, "tags": ["scaling", "engine"] },
-    "Wraith Form v2": { "baseScore": 68, "tags": ["block", "terminal"] },
+    "Wraith Form v2": { "baseScore": 78, "tags": ["block", "terminal"] },
     "Malaise": { "baseScore": 76, "tags": ["weak", "scaling"] },
     "Tools of the Trade": { "baseScore": 76, "tags": ["draw", "scaling", "engine"] },
     "Phantasmal Killer": { "baseScore": 58, "tags": ["scaling", "attack"] },
