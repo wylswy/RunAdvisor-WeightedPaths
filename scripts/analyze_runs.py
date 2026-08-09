@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
-"""Analyze Run Advisor decision logs in ~/RunAdvisorLogs/."""
+"""Analyze Run Advisor decision logs in ~/RunAdvisorLogs/.
+
+纯标准库实现（无 pandas 依赖），输出对局统计摘要，验证 Mod 推荐是否有效。
+"""
 
 from __future__ import annotations
 
 import argparse
 import json
-import os
+import sys
 from pathlib import Path
-
-import pandas as pd
 
 
 def load_runs(log_dir: Path) -> list[dict]:
@@ -33,6 +34,7 @@ def to_row(run: dict) -> dict:
     return {
         "runId": run.get("runId", ""),
         "seed": run.get("seed", ""),
+        "character": run.get("character", ""),
         "victory": bool(run.get("victory", False)),
         "floorReached": int(run.get("floorReached", 0) or 0),
         "endHp": int(run.get("endHp", 0) or 0),
@@ -43,8 +45,24 @@ def to_row(run: dict) -> dict:
     }
 
 
+def mean(xs: list[float]) -> float:
+    return sum(xs) / len(xs) if xs else 0.0
+
+
+def to_csv(rows: list[dict], path: Path) -> None:
+    if not rows:
+        print("csv: no rows")
+        return
+    cols = list(rows[0].keys())
+    with open(path, "w", encoding="utf-8-sig", newline="") as f:
+        f.write(",".join(cols) + "\n")
+        for r in rows:
+            f.write(",".join(str(r.get(c, "")) for c in cols) + "\n")
+    print(f"csv written: {path}")
+
+
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Analyze RunAdvisorLogs run summaries")
+    parser = argparse.ArgumentParser(description="Analyze RunAdvisorLogs run summaries (stdlib)")
     default_dir = Path.home() / "RunAdvisorLogs"
     parser.add_argument("--log-dir", type=Path, default=default_dir)
     parser.add_argument("--csv", type=Path, default=None, help="Optional CSV output path")
@@ -52,29 +70,30 @@ def main() -> None:
 
     if not args.log_dir.exists():
         print(f"log dir not found: {args.log_dir}")
-        return
+        sys.exit(0)
 
     runs = load_runs(args.log_dir)
     if not runs:
         print(f"no runs in {args.log_dir}")
-        return
+        sys.exit(0)
 
-    df = pd.DataFrame([to_row(r) for r in runs])
-    total = len(df)
-    wins = int(df["victory"].sum())
-    early_death = int((df["floorReached"] <= 30).sum())
-    act1_elite_rate = float(df["act1EliteChosen"].mean()) if total else 0.0
+    rows = [to_row(r) for r in runs]
+    total = len(rows)
+    wins = sum(1 for r in rows if r["victory"])
+    early_death = sum(1 for r in rows if r["floorReached"] <= 30)
+    act1_elite_rate = mean([r["act1EliteChosen"] for r in rows])
+    avg_floor = mean([r["floorReached"] for r in rows])
+    avg_end_hp = mean([r["endHp"] for r in rows])
 
     print(f"runs={total}")
     print(f"win%={wins / total * 100:.1f}")
     print(f"earlyDeath% (floor<=30)={early_death / total * 100:.1f}")
     print(f"act1EliteChosen%={act1_elite_rate * 100:.1f}")
-    print(f"avgFloor={df['floorReached'].mean():.1f}")
-    print(f"avgEndHp={df['endHp'].mean():.1f}")
+    print(f"avgFloor={avg_floor:.1f}")
+    print(f"avgEndHp={avg_end_hp:.1f}")
 
     if args.csv:
-        df.to_csv(args.csv, index=False, encoding="utf-8-sig")
-        print(f"csv written: {args.csv}")
+        to_csv(rows, args.csv)
 
 
 if __name__ == "__main__":

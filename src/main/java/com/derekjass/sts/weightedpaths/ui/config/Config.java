@@ -39,7 +39,7 @@ public class Config {
         defaults.setProperty(SHOW_ACT_PREVIEW_KEY, "true");
         defaults.setProperty(SHOW_CARD_SCORES_KEY, "true");
         defaults.setProperty(SHOW_NODE_WEIGHTS_KEY, "true");
-        defaults.setProperty(ENABLE_DECISION_LOG_KEY, "false");
+        defaults.setProperty(ENABLE_DECISION_LOG_KEY, "true");
         try {
             config = new SpireConfig("WeightedPaths", "config", defaults);
             config.save();

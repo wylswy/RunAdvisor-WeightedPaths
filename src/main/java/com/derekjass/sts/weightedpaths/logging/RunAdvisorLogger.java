@@ -190,12 +190,15 @@ public final class RunAdvisorLogger {
     }
 
     private static void flushSummary() {
-        if (writer == null || current == null) {
+        if (current == null || currentFilePath == null || currentFilePath.isEmpty()) {
             return;
         }
-        try {
-            writer.write(GSON.toJson(current));
-            writer.flush();
+        // 修复：每次 flush 用覆盖模式重写整个文件，避免 BufferedWriter 多次 write 在
+        // 同一句柄上从上次偏移继续写导致 JSON 拼接（Extra data 解析失败）。
+        try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
+                new FileOutputStream(currentFilePath), StandardCharsets.UTF_8))) {
+            w.write(GSON.toJson(current));
+            w.flush();
         } catch (IOException e) {
             logger.error("Failed to write run log.", e);
         }
