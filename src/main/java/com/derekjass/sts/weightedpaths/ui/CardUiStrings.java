@@ -33,6 +33,8 @@ public final class CardUiStrings {
     public static final String SKIP_ALL_HINT =
             "\u5EFA\u8BAE\u8DF3\u8FC7\uFF0C\u4FDD\u7559\u5361\u7EC4\u7EAF\u5EA6";
     public static final String PICK_RECOMMENDED = "\u63A8\u8350";
+    // 抓牌历史：卡组已有同名牌数（第一层·基础信息透视）
+    public static final String HAVING_COUNT = "\u5DF2\u6709 %d \u5F20";
 
     public static final String REASON_PORT_DAMAGE = "\u3010\u7AEF\u53E3\u3011\u8F93\u51FA\u504F\u5F31\uFF0C\u8865\u4F24\u5BB3\u4F18\u5148";
     public static final String REASON_PORT_BLOCK = "\u3010\u7AEF\u53E3\u3011\u9632\u5FA1\u504F\u5F31\uFF0C\u8865\u683C\u6321\u4F18\u5148";
@@ -88,6 +90,7 @@ public final class CardUiStrings {
                 + REASON_NEED_AOE + REASON_ELITE_SCALING + REASON_STRONG_BASE
                 + REASON_LOW_SYNERGY + REASON_DEFAULT
                 + PICK_RECOMMENDED
+                + "\u5DF2\u6709\u5F20"
                 + "SABC";
     }
 }
