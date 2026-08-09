@@ -245,6 +245,6 @@ public class WeightedPaths implements PostInitializeSubscriber {
         SeedDecodeHook.initialize();
         ActPreviewRenderer.initialize();
         Config.initialize();
-        logger.info("Run Advisor 1.4.7 更新：① 血量低于30%时优先推荐火堆保命；② 涅奥祝福（前3战敌1血）期间把握白嫖精英机会；③ 方向识别强化主线（组件一致性）。");
+        logger.info("Run Advisor 1.4.9 更新：① 评分器可测性重构+80测试；② 幽魂形态不早期砍分；③ 一层权重火堆≈商店>小怪>事件>精英；④ 决策日志默认开启（数据分析选牌）。");
     }
 }

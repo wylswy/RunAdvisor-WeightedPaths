@@ -2,8 +2,8 @@
   "modid": "WeightedPaths",
   "name": "Run Advisor",
   "author_list": ["Derek Jass"],
-  "description": "地图最优路线、种子各幕预览、静默猎手 A20 卡奖推荐（1.4.7：低血量优先火堆、涅奥白嫖精英、方向识别强化主线）。基于 Weighted Paths。",
-  "version": "1.4.7",
+  "description": "地图最优路线、种子各幕预览、静默猎手 A20 卡奖推荐（1.4.9：评分器可测、幽魂不早期砍分、一层权重重排）。基于 Weighted Paths。",
+  "version": "1.4.9",
   "sts_version": "03-07-2022",
   "mts_version": "3.26.0",
   "dependencies": ["basemod"]
