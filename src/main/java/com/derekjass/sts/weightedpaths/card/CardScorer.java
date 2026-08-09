@@ -63,7 +63,7 @@ public final class CardScorer {
         }
 
         FourLayerScorer.DetailedResult detailed = FourLayerScorer.evaluateDetailed(
-                card, entry, base, snapshot, relics, situational, plan);
+                new CardInfo(card.cardID, card.costForTurn), entry, base, snapshot, relics, situational, plan);
         return new ScoredResult(detailed.recommendation, detailed.breakdown);
     }
 

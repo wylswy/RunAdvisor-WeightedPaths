@@ -1,10 +1,10 @@
 package com.derekjass.sts.weightedpaths.card;
 
 import com.derekjass.sts.weightedpaths.card.data.CardStatEntry;
-import com.megacrit.cardcrawl.cards.AbstractCard;
 
 /**
  * 四层筛选：纯三端口（DAMAGE / BLOCK / ENGINE），无流派包逻辑。
+ * 依赖轻量 {@link CardInfo}（cardId + costForTurn），不依赖游戏 AbstractCard，可单元测试。
  */
 public final class FourLayerScorer {
 
@@ -17,7 +17,7 @@ public final class FourLayerScorer {
     }
 
     public static CardRecommendation evaluate(
-            AbstractCard card,
+            CardInfo card,
             CardStatEntry entry,
             double baseScore,
             DeckSnapshot deck,
@@ -28,7 +28,7 @@ public final class FourLayerScorer {
     }
 
     public static DetailedResult evaluateDetailed(
-            AbstractCard card,
+            CardInfo card,
             CardStatEntry entry,
             double baseScore,
             DeckSnapshot deck,
@@ -78,7 +78,7 @@ public final class FourLayerScorer {
     }
 
     private static LayerResult layer1Survival(
-            AbstractCard card,
+            CardInfo card,
             CardStatEntry entry,
             DeckSnapshot deck,
             SituationalContext situational,
@@ -236,7 +236,7 @@ public final class FourLayerScorer {
     }
 
     private static double layer3PortSynergy(
-            AbstractCard card,
+            CardInfo card,
             CardStatEntry entry,
             DeckSnapshot deck,
             RelicProfile relics,
@@ -245,7 +245,7 @@ public final class FourLayerScorer {
             return 1.0;
         }
         double mult = 1.0;
-        String cardId = card.cardID;
+        String cardId = card.cardId;
 
         Port required = entry.requiredPort();
         if (required != null && entry.requiresMinPoints > 0
@@ -349,7 +349,7 @@ public final class FourLayerScorer {
     }
 
     private static double layer4Pollution(
-            AbstractCard card,
+            CardInfo card,
             CardStatEntry entry,
             DeckSnapshot deck,
             RelicProfile relics) {
@@ -390,7 +390,7 @@ public final class FourLayerScorer {
     }
 
     /** 一层裸抓的战未来：无即时价值、且无引擎前置（不含杂技/准备/后空翻）。 */
-    private static boolean isBareAct1Future(AbstractCard card, CardStatEntry entry, DeckSnapshot deck) {
+    private static boolean isBareAct1Future(CardInfo card, CardStatEntry entry, DeckSnapshot deck) {
         if (entry == null || card == null) {
             return false;
         }
@@ -400,7 +400,7 @@ public final class FourLayerScorer {
         if (entry.hasTag("act1Engine") || entry.hasTag("premiumTransition")) {
             return false;
         }
-        String id = card.cardID;
+        String id = card.cardId;
         if ("Reflex".equals(id) || "Setup".equals(id)) {
             return true;
         }
