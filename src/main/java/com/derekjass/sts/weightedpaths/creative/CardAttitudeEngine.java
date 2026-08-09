@@ -25,6 +25,9 @@ public final class CardAttitudeEngine {
     private static String pendingLine = "";
     /** 当前卡奖界面持续显示的台词。 */
     private static String displayLine = "";
+    /** AI 增强（可为 null，则纯本地模板）。 */
+    private static AttitudeAi ai;
+    private static String apiKey = "";
 
     private CardAttitudeEngine() {
     }
@@ -60,6 +63,55 @@ public final class CardAttitudeEngine {
                 pendingLine = pick(POOL_IGNORED_RECOMMENDED, recommendedId, chosenId);
             }
         }
+    }
+
+    /** 测试注入 mock AI 与 key。 */
+    public static void setAiForTest(AttitudeAi ai, String key) {
+        CardAttitudeEngine.ai = ai;
+        CardAttitudeEngine.apiKey = key == null ? "" : key;
+    }
+
+    /**
+     * 异步用 AI 增强当前待显示台词；失败/无 key/已被推进则保留本地模板。
+     * 调用方在玩家卡奖结束后调用（此时本地模板已生成）。
+     */
+    public static void enrichWithAi(String recommendedId, boolean recommendedSkipAll,
+                                    String chosenId, boolean skipped, String chosenGrade,
+                                    String deckContext) {
+        if (pendingLine.isEmpty()) {
+            return;
+        }
+        if (ai == null) {
+            ai = createDefaultAi();
+        }
+        if (ai == null) {
+            return; // 无 key：纯本地模板
+        }
+        final String template = pendingLine;
+        new Thread(() -> {
+            try {
+                String line = ai.generateFor(recommendedId, recommendedSkipAll,
+                        chosenId, skipped, chosenGrade, deckContext);
+                // 仅当模板尚未被 advance 消费时替换，避免覆盖更新的台词
+                if (line != null && !line.isEmpty() && pendingLine.equals(template)) {
+                    pendingLine = line;
+                }
+            } catch (Exception ignored) {
+                // 网络/解析异常：保留模板
+            }
+        }).start();
+    }
+
+    /** 懒加载默认 AI：从环境变量/系统属性读 key；未配置返回 null（纯模板）。 */
+    private static AttitudeAi createDefaultAi() {
+        String key = System.getenv("RUN_ADVISOR_AI_KEY");
+        if (key == null || key.trim().isEmpty()) {
+            key = System.getProperty("runAdvisor.aiKey");
+        }
+        if (key == null || key.trim().isEmpty()) {
+            return null;
+        }
+        return new DeepSeekAttitudeAi(key.trim());
     }
 
     /** 下一次卡奖出现时调用：把上次生成的台词提升为当前卡奖界面显示。 */

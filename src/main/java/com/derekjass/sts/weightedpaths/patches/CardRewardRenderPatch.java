@@ -295,6 +295,9 @@ public class CardRewardRenderPatch {
                     ? "" : lastRewardGrades.getOrDefault(chosen, "");
             CardAttitudeEngine.evaluateReward(
                     lastRecommendedId, lastSkipAll, chosen, chosen.isEmpty(), chosenGrade);
+            // AI 增强：异步用 DeepSeek 生成个性化台词，失败/无 key 回落本地模板
+            CardAttitudeEngine.enrichWithAi(
+                    lastRecommendedId, lastSkipAll, chosen, chosen.isEmpty(), chosenGrade, "");
         }
     }
 
