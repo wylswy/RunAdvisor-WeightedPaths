@@ -37,10 +37,6 @@ public class CardRewardRenderPatch {
     // 抓牌历史"已有 N 张"的次要文字色
     private static final Color HAVING_COLOR = new Color(0.78f, 0.78f, 0.78f, 1.0f);
     private static String lastRewardLogKey = "";
-    /** 本次卡奖的候选卡 ID 集合（供 onClose 回填玩家实际选择）。 */
-    private static java.util.Set<String> lastRewardCardIds = new java.util.HashSet<>();
-    /** 卡奖出现时玩家牌组各卡数量（供 onClose 对比新增）。 */
-    private static java.util.Map<String, Integer> lastDeckCountBefore = new java.util.HashMap<>();
     /** 本次卡奖推荐抓的卡 ID（供 onClose 检测违背）。 */
     private static String lastRecommendedId = "";
     /** 本次卡奖是否推荐整次跳过。 */
@@ -153,21 +149,6 @@ public class CardRewardRenderPatch {
             return;
         }
         lastRewardLogKey = key;
-        // 记录本次卡奖上下文，供 onClose 时对比玩家实际抓卡
-        lastRewardCardIds = new java.util.HashSet<>();
-        lastDeckCountBefore = new java.util.HashMap<>();
-        for (AbstractCard card : screen.rewardGroup) {
-            if (card != null) {
-                lastRewardCardIds.add(card.cardID);
-            }
-        }
-        if (AbstractDungeon.player != null && AbstractDungeon.player.masterDeck != null) {
-            for (AbstractCard c : AbstractDungeon.player.masterDeck.group) {
-                if (c != null) {
-                    lastDeckCountBefore.merge(c.cardID, 1, Integer::sum);
-                }
-            }
-        }
         // 记录推荐信息（供 onClose 检测玩家是否违背）；并推进「卡的态度」台词显示
         lastRecommendedId = bestCard == null ? "" : bestCard.cardID;
         lastSkipAll = skipAll;
@@ -327,29 +308,5 @@ public class CardRewardRenderPatch {
                 cardNameMap.put(card.cardID, card.name);
             }
         }
-    }
-
-    /** 对比牌组，推断玩家在最近一次卡奖实际抓的卡；无新增则返回空串（跳过）。 */
-    private static String resolveChosenFromDeck() {
-        if (AbstractDungeon.player == null || AbstractDungeon.player.masterDeck == null) {
-            return "";
-        }
-        java.util.Map<String, Integer> now = new java.util.HashMap<>();
-        for (AbstractCard c : AbstractDungeon.player.masterDeck.group) {
-            if (c != null) {
-                now.merge(c.cardID, 1, Integer::sum);
-            }
-        }
-        for (java.util.Map.Entry<String, Integer> e : now.entrySet()) {
-            String id = e.getKey();
-            if (!lastRewardCardIds.contains(id)) {
-                continue;
-            }
-            int before = lastDeckCountBefore.getOrDefault(id, 0);
-            if (e.getValue() > before) {
-                return id;
-            }
-        }
-        return "";
     }
 }

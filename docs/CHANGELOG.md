@@ -9,7 +9,11 @@
 
 | 提交 | 变更 | 原因 |
 |------|------|------|
-| 3c8d3fa | 评分器可测性重构：新增 `CardInfo`(cardId+costForTurn) 解耦游戏 AbstractCard，FourLayerScorer/CardScorer 改依赖 CardInfo（行为零变化）；补 FourLayerScorer 12 用例 + SilentRouteValuationExtra 7 用例 | 游戏 AbstractCard 在纯 JUnit 静态初始化 NPE，评分器原本完全无法单测（B3 评分器零测试）；解耦后评分核心可测 |
+| 4e44f28 | 聊天框 UI：ChatBoxUi 地图悬浮面板渲染对话 + 系统输入框(Gdx.getTextInput 支持中文) + ChatBoxPatch 挂载 DungeonMapScreen render/update；卡态度台词接入聊天框「主动开口」 | 让「卡」从单方面怼人升级为可对话的陪伴——8.11 交付核心「创造性 AI + 陪伴」 |
+| dcdc37c | 聊天框核心 ChatBoxCore：对话管理 + 道歉识别触发好感度 + AI 多轮回复 + 聊天提示词构造(AiChat 接口, 6 用例) | 聊天灵魂核心，纯逻辑可测 |
+| 4fde8ee | 卡的态度：acquireCard 直接记录实际抓卡(修「抓了却说没抓」) + 卡 ID 转中文名 + 台词生命周期清空(不残留) + AI 提示词强化杀戮尖塔世界观约束 + 黑名单过滤游戏外设定 + 好感度状态机 CardMoodEngine(记仇/闹脾气/道歉/原谅, 9 用例) | 修复实测问题；建立「卡会记仇会原谅」的情感循环 |
+| 9037435 | 版本统一 1.4.7→1.4.9（pom/README/ModTheSpire.json/RunAdvisorLogger/WeightedPaths 五处）；CHANGELOG 补 1.4.9 条目 | 根治「版本纪律反复破功」；记录全部 08-09 改动 |
+| 36edb48 | 补卡牌数据地基+路径格式化测试 11 用例（CardStatsLoader 验证 75 卡完整/requiresPort/关键锚点、RouteFormatUtil 符号格式化） | 锁住 75 卡数据地基防漏配/拼错；验证端口化关键卡配置 |
 | b5b5acd | 补纯逻辑模型测试 ModelLogic 21 用例（CardStatEntry/PortProfile/DeckSnapshot/PathSymbolCounts） | 覆盖评分/路线核心数据结构方法，此前零覆盖 |
 | 3341ba8 | 用户定稿调参：幽魂形态任何阶段（含一层）不再早期 ×0.52 砍分、改 blockPoints≥3 保底 ×1.22；一层房间权重改为火堆≈商店>小怪>事件>精英；silent_cards_a20.json 调参；VerificationCasesTest 断言同步 | 用户 08-09 定稿：幽魂不应被杂技压过；一层按风险/收益重排权重 |
 | fae5190 | 决策日志链路：analyze_runs.py 去 pandas（纯标准库+CSV 导出）、RunAdvisorLogger flush 改覆盖模式防 JSON 拼接、Config 默认开启决策日志 | 消除 pandas 依赖；修复日志 JSON 拼接导致 Extra data 解析失败；默认记录对局供分析 |
