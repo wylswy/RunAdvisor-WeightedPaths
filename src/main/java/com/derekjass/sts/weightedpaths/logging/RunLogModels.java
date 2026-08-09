@@ -45,6 +45,10 @@ public final class RunLogModels {
         public double hpRatio;
         public boolean recommendedSkipAll;
         public List<CardChoiceLog> choices = new ArrayList<>();
+        /** 玩家实际抓的卡 cardID；"" 表示跳过或尚未记录。 */
+        public String playerChosen = "";
+        /** 玩家是否跳过了本次卡奖。 */
+        public boolean playerSkipped = false;
     }
 
     public static final class CardChoiceLog {

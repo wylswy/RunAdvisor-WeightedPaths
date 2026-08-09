@@ -31,6 +31,8 @@ public final class RunAdvisorLogger {
     private static RunLogModels.RunSummary current;
     private static BufferedWriter writer;
     private static String currentFilePath;
+    /** 最近一次记录的卡奖（供玩家选择后回填 playerChosen）。 */
+    private static RunLogModels.CardRewardLog lastReward;
 
     private RunAdvisorLogger() {
     }
@@ -55,6 +57,7 @@ public final class RunAdvisorLogger {
         }
         closeWriterQuietly();
         current = new RunLogModels.RunSummary();
+        lastReward = null;
         current.runId = UUID.randomUUID().toString().substring(0, 8);
         current.startedAtMs = System.currentTimeMillis();
         current.seed = Settings.seed == null ? "" : Settings.seed.toString();
@@ -131,6 +134,22 @@ public final class RunAdvisorLogger {
             reward.choices.addAll(choices);
         }
         current.cardRewards.add(reward);
+        lastReward = reward;
+        flushSummary();
+    }
+
+    /**
+     * 记录玩家在最近一次卡奖的实际选择（卡奖关闭时调用，回填 playerChosen/playerSkipped）。
+     *
+     * @param cardId 玩家实际抓的卡 ID；跳过时传空串。
+     * @param skipped 玩家是否跳过了本次卡奖。
+     */
+    public static void logPlayerCardChoice(String cardId, boolean skipped) {
+        if (!isEnabled() || current == null || lastReward == null) {
+            return;
+        }
+        lastReward.playerChosen = cardId == null ? "" : cardId;
+        lastReward.playerSkipped = skipped;
         flushSummary();
     }
 

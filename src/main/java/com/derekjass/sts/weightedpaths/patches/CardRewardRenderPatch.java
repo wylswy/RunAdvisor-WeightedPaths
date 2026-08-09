@@ -30,7 +30,13 @@ public class CardRewardRenderPatch {
     private static final Color GRADE_C = new Color(0.95f, 0.45f, 0.45f, 1.0f);
     private static final Color RECOMMENDED_COLOR = new Color(0.35f, 1.0f, 0.55f, 1.0f);
     private static final Color SKIP_HINT_COLOR = new Color(1.0f, 0.72f, 0.35f, 1.0f);
+    // 抓牌历史"已有 N 张"的次要文字色
+    private static final Color HAVING_COLOR = new Color(0.78f, 0.78f, 0.78f, 1.0f);
     private static String lastRewardLogKey = "";
+    /** 本次卡奖的候选卡 ID 集合（供 onClose 回填玩家实际选择）。 */
+    private static java.util.Set<String> lastRewardCardIds = new java.util.HashSet<>();
+    /** 卡奖出现时玩家牌组各卡数量（供 onClose 对比新增）。 */
+    private static java.util.Map<String, Integer> lastDeckCountBefore = new java.util.HashMap<>();
 
     public static void resetRewardLogCache() {
         lastRewardLogKey = "";
@@ -128,6 +134,21 @@ public class CardRewardRenderPatch {
             return;
         }
         lastRewardLogKey = key;
+        // 记录本次卡奖上下文，供 onClose 时对比玩家实际抓卡
+        lastRewardCardIds = new java.util.HashSet<>();
+        lastDeckCountBefore = new java.util.HashMap<>();
+        for (AbstractCard card : screen.rewardGroup) {
+            if (card != null) {
+                lastRewardCardIds.add(card.cardID);
+            }
+        }
+        if (AbstractDungeon.player != null && AbstractDungeon.player.masterDeck != null) {
+            for (AbstractCard c : AbstractDungeon.player.masterDeck.group) {
+                if (c != null) {
+                    lastDeckCountBefore.merge(c.cardID, 1, Integer::sum);
+                }
+            }
+        }
 
         java.util.ArrayList<RunLogModels.CardChoiceLog> choices = new java.util.ArrayList<>();
         int index = 0;
@@ -161,9 +182,34 @@ public class CardRewardRenderPatch {
 
         if (ModFonts.header != null) {
             FontHelper.renderFontCentered(sb, ModFonts.header, label, cx, cy, color);
-            return;
+        } else {
+            FontHelper.renderFontCentered(sb, FontHelper.cardTitleFont, label, cx, cy, color);
         }
-        FontHelper.renderFontCentered(sb, FontHelper.cardTitleFont, label, cx, cy, color);
+
+        // V2 蓝图·第一层抓牌历史：显示卡组已有同名牌数
+        int existing = countInDeck(card.cardID);
+        if (existing > 0) {
+            String having = String.format(CardUiStrings.HAVING_COUNT, existing);
+            float cy2 = cy - (22.0f * Settings.scale);
+            if (ModFonts.body != null) {
+                FontHelper.renderFontCentered(sb, ModFonts.body, having, cx, cy2, HAVING_COLOR);
+            } else {
+                FontHelper.renderFontCentered(sb, FontHelper.cardTitleFont, having, cx, cy2, HAVING_COLOR);
+            }
+        }
+    }
+
+    private static int countInDeck(String cardId) {
+        if (cardId == null) {
+            return 0;
+        }
+        int count = 0;
+        for (AbstractCard c : AbstractDungeon.player.masterDeck.group) {
+            if (c != null && cardId.equals(c.cardID)) {
+                count++;
+            }
+        }
+        return count;
     }
 
     private static void drawSkipHint(SpriteBatch sb) {
@@ -189,5 +235,41 @@ public class CardRewardRenderPatch {
             default:
                 return GRADE_C;
         }
+    }
+
+    @SpirePatch(clz = CardRewardScreen.class, method = "onClose")
+    public static class PostClosePatch {
+        @SpirePostfixPatch
+        public static void afterClose(CardRewardScreen __instance) {
+            if (!RunAdvisorLogger.isEnabled() || AbstractDungeon.player == null) {
+                return;
+            }
+            String chosen = resolveChosenFromDeck();
+            RunAdvisorLogger.logPlayerCardChoice(chosen, chosen.isEmpty());
+        }
+    }
+
+    /** 对比牌组，推断玩家在最近一次卡奖实际抓的卡；无新增则返回空串（跳过）。 */
+    private static String resolveChosenFromDeck() {
+        if (AbstractDungeon.player == null || AbstractDungeon.player.masterDeck == null) {
+            return "";
+        }
+        java.util.Map<String, Integer> now = new java.util.HashMap<>();
+        for (AbstractCard c : AbstractDungeon.player.masterDeck.group) {
+            if (c != null) {
+                now.merge(c.cardID, 1, Integer::sum);
+            }
+        }
+        for (java.util.Map.Entry<String, Integer> e : now.entrySet()) {
+            String id = e.getKey();
+            if (!lastRewardCardIds.contains(id)) {
+                continue;
+            }
+            int before = lastDeckCountBefore.getOrDefault(id, 0);
+            if (e.getValue() > before) {
+                return id;
+            }
+        }
+        return "";
     }
 }
