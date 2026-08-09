@@ -44,8 +44,9 @@ public final class CardAttitudeEngine {
         boolean hasRecommendation = recommendedId != null && !recommendedId.isEmpty();
 
         if (skipped) {
+            CardMoodEngine.recordDefiance();
             if (!recommendedSkipAll && hasRecommendation) {
-                pendingLine = pick(POOL_SKIPPED_RECOMMENDED, recommendedId);
+                pendingLine = applyMood(pick(POOL_SKIPPED_RECOMMENDED, recommendedId));
             }
             return;
         }
@@ -53,15 +54,34 @@ public final class CardAttitudeEngine {
             return;
         }
         if (recommendedSkipAll) {
-            pendingLine = pick(POOL_PICKED_DESPITE_SKIP, chosenId);
+            CardMoodEngine.recordDefiance();
+            pendingLine = applyMood(pick(POOL_PICKED_DESPITE_SKIP, chosenId));
             return;
         }
         if (hasRecommendation && !chosenId.equals(recommendedId)) {
+            CardMoodEngine.recordDefiance();
             if (isLowGrade(chosenGrade)) {
-                pendingLine = pick(POOL_PICKED_WEAK, recommendedId, chosenId);
+                pendingLine = applyMood(pick(POOL_PICKED_WEAK, recommendedId, chosenId));
             } else {
-                pendingLine = pick(POOL_IGNORED_RECOMMENDED, recommendedId, chosenId);
+                pendingLine = applyMood(pick(POOL_IGNORED_RECOMMENDED, recommendedId, chosenId));
             }
+        } else {
+            CardMoodEngine.recordCompliance(); // 按推荐抓：好感度回升
+        }
+    }
+
+    /** 按当前好感度给台词加语气：记仇加「哼！」、不高兴加「哼，」。 */
+    private static String applyMood(String line) {
+        if (line == null) {
+            return line;
+        }
+        switch (CardMoodEngine.currentMood()) {
+            case RESENTFUL:
+                return "哼！" + line;
+            case UNHAPPY:
+                return "哼，" + line;
+            default:
+                return line;
         }
     }
 
@@ -114,11 +134,13 @@ public final class CardAttitudeEngine {
         return new DeepSeekAttitudeAi(key.trim());
     }
 
-    /** 下一次卡奖出现时调用：把上次生成的台词提升为当前卡奖界面显示。 */
+    /** 下一次卡奖出现时调用：把上次生成的台词提升为当前卡奖界面显示；无新台词则清空。 */
     public static void advanceForNewReward() {
         if (!pendingLine.isEmpty()) {
             displayLine = pendingLine;
             pendingLine = "";
+        } else {
+            displayLine = ""; // 本次无违背台词：清空上次遗留的显示，避免"没违背还怼人"
         }
     }
 

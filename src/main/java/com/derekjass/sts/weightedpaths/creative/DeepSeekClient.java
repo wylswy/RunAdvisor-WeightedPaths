@@ -120,8 +120,10 @@ public final class DeepSeekClient {
             String chosenId, boolean skipped, String chosenGrade,
             String deckContext) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是杀戮尖塔里一张有脾气、会记得玩家的卡。现在玩家刚结束一次卡奖，你做了一件与推荐相悖的事。");
+        sb.append("你是《杀戮尖塔》(Slay the Spire) 里一张有脾气、会记得玩家的卡。这个游戏的世界观里只有卡牌、怪物、遗物、地图与商店，没有神、没有三柱神、没有宗教或神话人物、没有虚构地点。");
+        sb.append("现在玩家刚结束一次卡奖，做了一件与推荐相悖的事。");
         sb.append("请用一句中文、口语化、带性格的话回应他，语气像一个看不过去又有点在意你的老队友。");
+        sb.append("只谈卡牌、牌组、当前对局与选择，绝不提到任何游戏里不存在的设定、人物、神祇、宗教或地点。");
         sb.append("要记得他刚才具体干了什么（别空泛），可以说到他错过的卡名。别超过40字，别用引号。\n\n");
 
         sb.append("本次卡奖：\n");
@@ -142,7 +144,7 @@ public final class DeepSeekClient {
             sb.append("\n");
         }
         if (deckContext != null && !deckContext.isEmpty()) {
-            sb.append("- 你当前牌组状态：").append(deckContext).append("\n");
+            sb.append("- 当前游戏情境：").append(deckContext).append("（请让这句台词贴合这一情境，别提到其他层的 Boss 或设定）\n");
         }
         sb.append("\n只输出那一句台词本身。");
         return sb.toString();

@@ -46,6 +46,10 @@ public class CardRewardRenderPatch {
     private static boolean lastSkipAll = false;
     /** 本次卡奖各候选卡的 grade（供 onClose 判断弃高抓低）。 */
     private static final java.util.Map<String, String> lastRewardGrades = new java.util.HashMap<>();
+    /** 玩家本轮卡奖实际抓的卡 ID（acquireCard 记录；空=未抓/跳过）。 */
+    private static String playerPickedId = "";
+    /** 卡 ID → 中文名（供台词显示中文卡名）。 */
+    private static final java.util.Map<String, String> cardNameMap = new java.util.HashMap<>();
 
     public static void resetRewardLogCache() {
         lastRewardLogKey = "";
@@ -167,10 +171,13 @@ public class CardRewardRenderPatch {
         lastRecommendedId = bestCard == null ? "" : bestCard.cardID;
         lastSkipAll = skipAll;
         lastRewardGrades.clear();
+        cardNameMap.clear();
+        playerPickedId = "";
         for (AbstractCard card : screen.rewardGroup) {
             if (card == null) {
                 continue;
             }
+            cardNameMap.put(card.cardID, card.name);
             CardScorer.ScoredResult r = detailed.get(card);
             if (r != null) {
                 lastRewardGrades.put(card.cardID, r.recommendation.grade.name());
@@ -286,18 +293,32 @@ public class CardRewardRenderPatch {
             if (AbstractDungeon.player == null) {
                 return;
             }
-            String chosen = resolveChosenFromDeck();
+            String chosenId = playerPickedId;
+            boolean skipped = chosenId == null || chosenId.isEmpty();
             if (RunAdvisorLogger.isEnabled()) {
-                RunAdvisorLogger.logPlayerCardChoice(chosen, chosen.isEmpty());
+                RunAdvisorLogger.logPlayerCardChoice(chosenId == null ? "" : chosenId, skipped);
             }
-            // 卡的态度：检测本次卡奖是否违背推荐，生成待显示台词
-            String chosenGrade = (chosen == null || chosen.isEmpty())
-                    ? "" : lastRewardGrades.getOrDefault(chosen, "");
-            CardAttitudeEngine.evaluateReward(
-                    lastRecommendedId, lastSkipAll, chosen, chosen.isEmpty(), chosenGrade);
-            // AI 增强：异步用 DeepSeek 生成个性化台词，失败/无 key 回落本地模板
-            CardAttitudeEngine.enrichWithAi(
-                    lastRecommendedId, lastSkipAll, chosen, chosen.isEmpty(), chosenGrade, "");
+            // 卡名转中文（显示用；卡名唯一，比较仍有效）
+            String chosenName = cardNameMap.getOrDefault(chosenId == null ? "" : chosenId, "");
+            String recommendedName = cardNameMap.getOrDefault(lastRecommendedId, lastRecommendedId);
+            String chosenGrade = skipped ? "" : lastRewardGrades.getOrDefault(chosenId, "");
+            // 卡的态度：检测是否违背推荐，生成待显示台词
+            CardAttitudeEngine.evaluateReward(recommendedName, lastSkipAll, chosenName, skipped, chosenGrade);
+            // AI 增强：传入当前层数情境，避免台词说错层的 Boss/设定
+            String context = "当前第" + AbstractDungeon.actNum + "层";
+            CardAttitudeEngine.enrichWithAi(recommendedName, lastSkipAll, chosenName, skipped, chosenGrade, context);
+        }
+    }
+
+    /** 玩家实际抓卡：acquireCard 是卡奖确认抓卡的明确入口，直接记录比推断牌组可靠。 */
+    @SpirePatch(clz = CardRewardScreen.class, method = "acquireCard")
+    public static class AcquireCardPatch {
+        @SpirePostfixPatch
+        public static void afterAcquire(CardRewardScreen __instance, AbstractCard card) {
+            if (card != null) {
+                playerPickedId = card.cardID;
+                cardNameMap.put(card.cardID, card.name);
+            }
         }
     }
 
