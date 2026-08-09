@@ -140,8 +140,13 @@ public final class CardAttitudeEngine {
             displayLine = pendingLine;
             pendingLine = "";
         } else {
-            displayLine = ""; // 本次无违背台词：清空上次遗留的显示，避免"没违背还怼人"
+            displayLine = ""; // 本次无违背台词：清空上次遗留的显示
         }
+    }
+
+    /** 当前待显示的卡态度台词（可能为空）。 */
+    public static String pendingLine() {
+        return pendingLine;
     }
 
     /** 当前卡奖界面应显示的内容（可能为空）。 */

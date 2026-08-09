@@ -6,6 +6,7 @@ import com.derekjass.sts.weightedpaths.card.CardRecommendation;
 import com.derekjass.sts.weightedpaths.card.CardScorer;
 import com.derekjass.sts.weightedpaths.card.GlobalRunPlan;
 import com.derekjass.sts.weightedpaths.creative.CardAttitudeEngine;
+import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.logging.RunAdvisorLogger;
 import com.derekjass.sts.weightedpaths.logging.RunLogModels;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
@@ -302,10 +303,16 @@ public class CardRewardRenderPatch {
             String chosenName = cardNameMap.getOrDefault(chosenId == null ? "" : chosenId, "");
             String recommendedName = cardNameMap.getOrDefault(lastRecommendedId, lastRecommendedId);
             String chosenGrade = skipped ? "" : lastRewardGrades.getOrDefault(chosenId, "");
+            String context = "当前第" + AbstractDungeon.actNum + "层";
+            ChatBoxUi.get().core().setGameContext(context);
             // 卡的态度：检测是否违背推荐，生成待显示台词
             CardAttitudeEngine.evaluateReward(recommendedName, lastSkipAll, chosenName, skipped, chosenGrade);
+            // 卡的态度台词 → 聊天框（它"主动开口"）
+            String attitude = CardAttitudeEngine.pendingLine();
+            if (!attitude.isEmpty()) {
+                ChatBoxUi.get().core().addCardMessage(attitude);
+            }
             // AI 增强：传入当前层数情境，避免台词说错层的 Boss/设定
-            String context = "当前第" + AbstractDungeon.actNum + "层";
             CardAttitudeEngine.enrichWithAi(recommendedName, lastSkipAll, chosenName, skipped, chosenGrade, context);
         }
     }

@@ -94,6 +94,7 @@ public final class ChatBoxCore {
     }
 
     private void requestAiReply(String playerText) {
+        ensureAiChat();
         if (aiChat == null || apiKey.isEmpty()) {
             return; // 未配置 AI：聊天无自动回复（道歉仍会通过好感度反映到台词）
         }
@@ -108,6 +109,23 @@ public final class ChatBoxCore {
                 // AI 失败：静默（卡暂时不说话）
             }
         }).start();
+    }
+
+    /** 懒加载聊天 AI：从环境变量/系统属性读 key（与卡的态度共用）。 */
+    private void ensureAiChat() {
+        if (aiChat != null) {
+            return;
+        }
+        String key = System.getenv("RUN_ADVISOR_AI_KEY");
+        if (key == null || key.trim().isEmpty()) {
+            key = System.getProperty("runAdvisor.aiKey");
+        }
+        if (key == null || key.trim().isEmpty()) {
+            return;
+        }
+        final String k = key.trim();
+        aiChat = prompt -> DeepSeekClient.generateLine(k, prompt);
+        apiKey = k;
     }
 
     private void trimHistory() {
