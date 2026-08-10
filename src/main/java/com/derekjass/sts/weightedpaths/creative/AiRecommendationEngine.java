@@ -202,6 +202,6 @@ public final class AiRecommendationEngine {
         return AiRecommendation.pick(worst.cardId, MISCHIEF_REASON);
     }
 
-    /** 记仇时推坏卡的理由（带点赌气又调皮的语气）。 */
-    private static final String MISCHIEF_REASON = "哼，就推这张最次的，看你还听不听我的";
+    /** 记仇时推坏卡的理由（明着坏：清楚告诉玩家这是逗你的，不装）。 */
+    private static final String MISCHIEF_REASON = "本卡在赌气：这张是最次的，故意逗你，你爱信不信";
 }

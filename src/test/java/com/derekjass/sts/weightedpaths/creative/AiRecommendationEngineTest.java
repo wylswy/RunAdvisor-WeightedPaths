@@ -136,7 +136,7 @@ public class AiRecommendationEngineTest {
         assertTrue("记仇应给有效决策", rec.valid);
         assertEquals("DaggerSpray", rec.recommendedId);
         assertFalse(rec.skipAll);
-        assertTrue("理由应是赌气调皮的", rec.reason.contains("最次"));
+        assertTrue("理由应明说这是逗你的(明着坏)", rec.reason.contains("逗你"));
     }
 
     @Test
