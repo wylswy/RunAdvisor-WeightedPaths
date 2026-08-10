@@ -75,4 +75,29 @@ public class ChatBoxCoreTest {
         assertTrue(prompt.contains("卡：卡的话"));
         assertTrue(prompt.contains("玩家：玩家的话"));
     }
+
+    @Test
+    public void restoreMessages_appendsAndTrims() {
+        ChatBoxCore core = new ChatBoxCore();
+        core.restoreMessages(java.util.Arrays.asList(
+                new ChatMessage(Sender.CARD, "你跑啦？"),
+                new ChatMessage(Sender.PLAYER, "  我回来了  "),
+                new ChatMessage(Sender.CARD, "   "), // 空白应被忽略
+                null));
+        assertEquals(2, core.messages().size());
+        assertEquals(Sender.CARD, core.messages().get(0).sender);
+        assertEquals("你跑啦？", core.messages().get(0).text);
+        assertEquals("我回来了", core.messages().get(1).text); // 去空白
+    }
+
+    @Test
+    public void onChangeFiresOnMessage() {
+        ChatBoxCore core = new ChatBoxCore();
+        final int[] count = {0};
+        core.setOnChange(() -> count[0]++);
+        core.addCardMessage("一句");
+        core.onPlayerSend("玩家");
+        core.addCardMessage("  "); // 空白不触发
+        assertEquals(2, count[0]);
+    }
 }

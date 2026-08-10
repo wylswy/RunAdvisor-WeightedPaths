@@ -33,6 +33,23 @@ public final class ChatBoxCore {
     private AiChat aiChat;
     private String apiKey = "";
     private String gameContext = "";
+    /** 对话变化时回调（用于落盘持久化，供 SL 恢复）；可注入，默认无。 */
+    private Runnable onChange;
+
+    /** 设置对话变化回调（如落盘保存）。 */
+    public void setOnChange(Runnable onChange) {
+        this.onChange = onChange;
+    }
+
+    private void notifyChange() {
+        if (onChange != null) {
+            try {
+                onChange.run();
+            } catch (Exception ignored) {
+                // 落盘失败不致命
+            }
+        }
+    }
 
     /** 测试注入 mock AI。 */
     public void setAiChatForTest(AiChat aiChat, String apiKey) {
@@ -54,6 +71,19 @@ public final class ChatBoxCore {
         messages.clear();
     }
 
+    /** 恢复历史对话（SL 重进同一局）。按 sender 逐条加入。 */
+    public void restoreMessages(List<ChatMessage> restored) {
+        if (restored == null) {
+            return;
+        }
+        for (ChatMessage m : restored) {
+            if (m != null && m.text != null && !m.text.trim().isEmpty()) {
+                messages.add(new ChatMessage(m.sender, m.text.trim()));
+            }
+        }
+        trimHistory();
+    }
+
     /** 卡主动发消息（态度台词、提醒等）。 */
     public void addCardMessage(String text) {
         if (text == null || text.trim().isEmpty()) {
@@ -61,6 +91,7 @@ public final class ChatBoxCore {
         }
         messages.add(new ChatMessage(Sender.CARD, text.trim()));
         trimHistory();
+        notifyChange();
     }
 
     /** 玩家发送消息：入历史 → 道歉识别 → AI 回复。 */
@@ -71,6 +102,7 @@ public final class ChatBoxCore {
         String trimmed = text.trim();
         messages.add(new ChatMessage(Sender.PLAYER, trimmed));
         trimHistory();
+        notifyChange();
         if (CardMoodEngine.isApology(trimmed)) {
             CardMoodEngine.recordApology();
         }

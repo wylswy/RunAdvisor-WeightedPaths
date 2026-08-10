@@ -88,4 +88,22 @@ public class CardMoodEngineTest {
         assertFalse(CardMoodEngine.isApology(""));
         assertFalse(CardMoodEngine.isApology("   "));
     }
+
+    @Test
+    public void restoreFavor_setsWithinBounds() {
+        CardMoodEngine.reset();
+        CardMoodEngine.restoreFavor(-5);
+        assertEquals(-5, CardMoodEngine.favor());
+        CardMoodEngine.restoreFavor(7);
+        assertEquals(7, CardMoodEngine.favor());
+    }
+
+    @Test
+    public void restoreFavor_clampsToBounds() {
+        CardMoodEngine.reset();
+        CardMoodEngine.restoreFavor(100);   // 夹到 +10
+        assertEquals(10, CardMoodEngine.favor());
+        CardMoodEngine.restoreFavor(-100);  // 夹到 -10
+        assertEquals(-10, CardMoodEngine.favor());
+    }
 }

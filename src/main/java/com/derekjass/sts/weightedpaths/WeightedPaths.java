@@ -16,8 +16,10 @@ import com.derekjass.sts.weightedpaths.ui.path.ActPreviewRenderer;
 import com.derekjass.sts.weightedpaths.ui.path.BestPathRenderer;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
 import com.derekjass.sts.weightedpaths.creative.ChatInputProcessor;
+import com.derekjass.sts.weightedpaths.creative.ChatBoxCore;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.creative.CardMoodEngine;
+import com.derekjass.sts.weightedpaths.creative.RunPersistence;
 import com.evacipated.cardcrawl.modthespire.lib.SpireInitializer;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
@@ -251,13 +253,63 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         Config.initialize();
         // 包装输入处理器：让聊天框能接收键盘（英文直接打字，中文 Ctrl+V 粘贴）
         ChatInputProcessor.install();
+        // 对话每次变化即落盘，SL 重进可恢复（Save/Load 保持卡的记忆）
+        ChatBoxUi.get().core().setOnChange(WeightedPaths::saveCurrentRunState);
         logger.info("Run Advisor 1.4.9 更新：① 评分器可测性重构+80测试；② 幽魂形态不早期砍分；③ 一层权重火堆≈商店>小怪>事件>精英；④ 决策日志默认开启（数据分析选牌）。");
     }
 
-    /** 新局开始：清空上一局的聊天记录与好感度，避免跨局残留。 */
+    /** 新局/读档开始：分辨是 SL 重进同一局还是全新一局。 */
     @Override
     public void receiveStartGame() {
-        ChatBoxUi.get().core().clear();
-        CardMoodEngine.reset();
+        Long seed = Settings.seed;
+        long ts = Settings.seedSourceTimestamp;
+        ChatBoxCore core = ChatBoxUi.get().core();
+        // 同一局重进（SL/读档）：恢复对话 + 好感度，卡调侃你偷偷重开
+        if (RunPersistence.isSameRun(seed, ts)) {
+            core.clear();
+            core.restoreMessages(toCoreMessages(RunPersistence.loadMessages()));
+            CardMoodEngine.restoreFavor(RunPersistence.loadFavor());
+            core.addCardMessage(pickSlTease());
+        } else {
+            // 全新一局：清空旧对话 + 重置好感度，落盘新指纹
+            core.clear();
+            CardMoodEngine.reset();
+            saveCurrentRunState();
+        }
+    }
+
+    private static void saveCurrentRunState() {
+        Long seed = Settings.seed;
+        if (seed == null) {
+            return;
+        }
+        RunPersistence.saveCurrentRun(seed, Settings.seedSourceTimestamp,
+                ChatBoxUi.get().core().messages(), CardMoodEngine.favor());
+    }
+
+    private static List<ChatBoxCore.ChatMessage> toCoreMessages(
+            List<RunPersistence.PersistedMessage> persisted) {
+        List<ChatBoxCore.ChatMessage> result = new java.util.ArrayList<>();
+        if (persisted == null) {
+            return result;
+        }
+        for (RunPersistence.PersistedMessage m : persisted) {
+            if (m != null) {
+                result.add(new ChatBoxCore.ChatMessage(m.sender, m.text));
+            }
+        }
+        return result;
+    }
+
+    /** 卡发现玩家 SL 重开时的调侃台词。 */
+    private static String pickSlTease() {
+        String[] pool = {
+                "咦，你是不是偷偷重开啦？别以为我不知道，我都记得呢。",
+                "嗯？上一局那个你……是你吧？偷偷溜走又跑回来啦。",
+                "你居然重开了。行，卡还是那张卡，我也还记着你。",
+                "哼哼，强杀退游那招，我可瞧见啦。"
+        };
+        int i = (int) (Math.random() * pool.length);
+        return pool[i];
     }
 }

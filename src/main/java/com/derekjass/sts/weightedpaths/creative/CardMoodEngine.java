@@ -62,6 +62,11 @@ public final class CardMoodEngine {
         favor = 0;
     }
 
+    /** 恢复好感度（SL 重进同一局）。夹紧到 -10..10。 */
+    public static void restoreFavor(int value) {
+        favor = Math.max(FAVOR_MIN, Math.min(FAVOR_MAX, value));
+    }
+
     /**
      * 道歉识别：判断玩家的聊天输入是否包含道歉/服软意图。
      * 命中则返回 true，调用方应 {@link #recordApology()}。
