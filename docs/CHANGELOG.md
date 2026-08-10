@@ -9,6 +9,11 @@
 
 | 提交 | 变更 | 原因 |
 |------|------|------|
+| 8075770 | 聊天框翻页：消息超一屏(MAX_LINES=8)时显示「上一页/下一页」按钮 + 当前消息范围条，点击翻页(每次 8 条)，新消息自动回到最新页 | 聊天记录变长后无翻看历史入口，早的对话看不到 |
+| 7fef063 | SL 检测 + 记忆落盘：RunPersistence 持久化 run 指纹(seed+seedSourceTimestamp)+聊天记录+好感度到 `~/RunAdvisorLogs/run_state.json`；receiveStartGame 用指纹区分「SL 读档」(恢复对话+好感度+卡调侃你重开) vs 「新局」(清空)；ChatBoxCore onChange 回调落盘 + restoreMessages；CardMoodEngine restoreFavor | SL 是同一局重进(指纹不变)，新局是新指纹——用指纹区分，让卡记得你偷偷重开 |
+| 617a5f8 | 记仇使坏反馈闭环：上当→得意台词+好感回升，没上当→嘴硬台词+好感再降(专属台词池)，onClose 区分使坏场景走 evaluateMischiefResult；修复「没有上当」vs「没上当」断言 bug | 让「骗」成完整情感循环：骗成功得意，骗失败嘴硬 |
+| db241f8 | 记仇使坏：好感度记仇(RESENTFUL)时 AI 故意推候选最差卡逗玩家(看你还信不信)+调皮理由+4 用例 | 卡记仇时会故意推坏卡试探你的信任——「有灵魂」的关键 |
+| b64a36c | AI 拍板推荐：让有性格的卡决定推荐哪张 + 性格化理由 + 规则兜底(AI 失败永不卡)+温柔陪伴版聊天框收尾(Tab 呼出/卡奖界面挂载/新局清空/台词温柔化) | 8.11 交付核心：推荐带性格(AI 拍板)，规则算分器保底可靠 |
 | 4e44f28 | 聊天框 UI：ChatBoxUi 地图悬浮面板渲染对话 + 系统输入框(Gdx.getTextInput 支持中文) + ChatBoxPatch 挂载 DungeonMapScreen render/update；卡态度台词接入聊天框「主动开口」 | 让「卡」从单方面怼人升级为可对话的陪伴——8.11 交付核心「创造性 AI + 陪伴」 |
 | dcdc37c | 聊天框核心 ChatBoxCore：对话管理 + 道歉识别触发好感度 + AI 多轮回复 + 聊天提示词构造(AiChat 接口, 6 用例) | 聊天灵魂核心，纯逻辑可测 |
 | 4fde8ee | 卡的态度：acquireCard 直接记录实际抓卡(修「抓了却说没抓」) + 卡 ID 转中文名 + 台词生命周期清空(不残留) + AI 提示词强化杀戮尖塔世界观约束 + 黑名单过滤游戏外设定 + 好感度状态机 CardMoodEngine(记仇/闹脾气/道歉/原谅, 9 用例) | 修复实测问题；建立「卡会记仇会原谅」的情感循环 |
