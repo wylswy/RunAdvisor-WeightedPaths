@@ -175,4 +175,33 @@ public final class AiRecommendationEngine {
         }
         return ids;
     }
+
+    /**
+     * 记仇时的「使坏」决策：故意把推荐指向候选里评级/分数最差的那张，逗玩家——看你还信不信它。
+     *
+     * <p>情感逻辑（设计意图）：它记仇时推坏卡，就是想试探玩家是否还信任它。
+     * 若玩家当真抓了这张坏卡 → 态度引擎视作「顺从推荐」，好感度回升（它被你的信任打动）；
+     * 若玩家没上当 → 它继续闹脾气。这条线让「骗」和「原谅」连成完整的情感循环。
+     *
+     * @param candidates 本次候选卡（至少 1 张）
+     * @return 指向最差卡的决策；无候选时返回 invalid（回落规则兜底）
+     */
+    public static AiRecommendation mischiefDecision(List<Candidate> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return AiRecommendation.invalid();
+        }
+        Candidate worst = candidates.get(0);
+        for (Candidate c : candidates) {
+            if (c != null && c.score < worst.score) {
+                worst = c;
+            }
+        }
+        if (worst == null || worst.cardId == null) {
+            return AiRecommendation.invalid();
+        }
+        return AiRecommendation.pick(worst.cardId, MISCHIEF_REASON);
+    }
+
+    /** 记仇时推坏卡的理由（带点赌气又调皮的语气）。 */
+    private static final String MISCHIEF_REASON = "哼，就推这张最次的，看你还听不听我的";
 }

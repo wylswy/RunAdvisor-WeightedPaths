@@ -187,6 +187,17 @@ public class CardRewardRenderPatch {
             candidates.add(new AiRecommendationEngine.Candidate(card.cardID, card.name, grade, score));
             ids.add(card.cardID);
         }
+
+        // 记仇时：故意推最差的卡逗玩家（看你还信不信它），不依赖 AI 网络，稳定可触发
+        if (com.derekjass.sts.weightedpaths.creative.CardMoodEngine.currentMood()
+                == com.derekjass.sts.weightedpaths.creative.CardMoodEngine.Mood.RESENTFUL) {
+            AiRecommendation mischief = AiRecommendationEngine.mischiefDecision(candidates);
+            if (mischief.valid) {
+                aiRec = mischief;
+            }
+            return;
+        }
+
         final int favor = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor();
         final String mood = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.currentMood().name();
         final String prompt = AiRecommendationEngine.buildPrompt(candidates, deckContext, favor, mood);

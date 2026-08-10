@@ -128,4 +128,40 @@ public class AiRecommendationEngineTest {
                 Arrays.asList(c("A"), null, c("B")));
         assertEquals(2, ids.size());
     }
+
+    @Test
+    public void mischiefDecision_picksWorstCard() {
+        // DaggerSpray 分最低(40)，记仇时应故意推它
+        AiRecommendation rec = AiRecommendationEngine.mischiefDecision(candidates());
+        assertTrue("记仇应给有效决策", rec.valid);
+        assertEquals("DaggerSpray", rec.recommendedId);
+        assertFalse(rec.skipAll);
+        assertTrue("理由应是赌气调皮的", rec.reason.contains("最次"));
+    }
+
+    @Test
+    public void mischiefDecision_emptyInvalid() {
+        assertFalse(AiRecommendationEngine.mischiefDecision(null).valid);
+        assertFalse(AiRecommendationEngine.mischiefDecision(new java.util.ArrayList<>()).valid);
+    }
+
+    @Test
+    public void mischiefDecision_singleCandidatePicksIt() {
+        List<Candidate> single = Arrays.asList(c("Footwork"));
+        AiRecommendation rec = AiRecommendationEngine.mischiefDecision(single);
+        assertTrue(rec.valid);
+        assertEquals("Footwork", rec.recommendedId);
+    }
+
+    @Test
+    public void mischiefDecision_picksLowestScoreAmongTies() {
+        List<Candidate> list = Arrays.asList(
+                new Candidate("A", "A", "B", 60.0),
+                new Candidate("B", "B", "C", 30.0),
+                new Candidate("C", "C", "C", 30.0));
+        // B 和 C 同分最低，任选其一且必须是 A 之外的差卡
+        AiRecommendation rec = AiRecommendationEngine.mischiefDecision(list);
+        assertTrue(rec.valid);
+        assertTrue("应推最差之一", "B".equals(rec.recommendedId) || "C".equals(rec.recommendedId));
+    }
 }
