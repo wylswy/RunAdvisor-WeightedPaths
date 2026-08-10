@@ -33,6 +33,10 @@ public final class ChatBoxUi {
     /** 输入模式：开启时接管键盘，玩家在输入框直接打字。 */
     private boolean inputMode = false;
     private final StringBuilder inputText = new StringBuilder();
+    /** 翻页偏移：0=最新一页，>0 表示往历史翻了 N 条。 */
+    private int pageOffset = 0;
+    /** 上次渲染时的消息总数，用于检测新消息并自动回到最新页。 */
+    private int lastTotalSeen = 0;
 
     private float boxX;
     private float boxY;
@@ -86,11 +90,20 @@ public final class ChatBoxUi {
                 boxX + boxW / 2.0f, boxY + boxH - 22.0f * Settings.scale,
                 new Color(0.98f, 0.82f, 0.35f, 1.0f));
 
-        // 对话（最近 MAX_LINES 条）
+        // 对话（翻页窗口，每页最多 MAX_LINES 条）
         List<ChatMessage> msgs = core.messages();
-        int start = Math.max(0, msgs.size() - MAX_LINES);
+        int total = msgs.size();
+        // 有新消息进来 → 自动回到最新页（避免停在历史页看不到新对话）
+        if (total > lastTotalSeen) {
+            pageOffset = 0;
+        }
+        lastTotalSeen = total;
+        int maxOffset = Math.max(0, total - MAX_LINES);
+        pageOffset = Math.max(0, Math.min(pageOffset, maxOffset));
+        int end = total - pageOffset;
+        int start = Math.max(0, end - MAX_LINES);
         float y = boxY + boxH - 62.0f * Settings.scale;
-        for (int i = start; i < msgs.size(); i++) {
+        for (int i = start; i < end; i++) {
             ChatMessage m = msgs.get(i);
             String prefix = m.sender == Sender.CARD ? "卡： " : "你： ";
             Color c = m.sender == Sender.CARD
@@ -102,6 +115,24 @@ public final class ChatBoxUi {
             if (y < boxY + 30.0f * Settings.scale) {
                 break;
             }
+        }
+
+        // 翻页条（仅当消息数超过一屏时显示）
+        if (maxOffset > 0) {
+            float barY = boxY + boxH - 40.0f * Settings.scale;
+            String rangeLabel = "第 " + (start + 1) + "~" + end + " 条 / 共 " + total + " 条";
+            FontHelper.renderFontCentered(sb, font, rangeLabel,
+                    boxX + boxW / 2.0f, barY, new Color(0.8f, 0.8f, 0.8f, 1.0f));
+            // 上一页（往历史翻）
+            boolean hasPrev = pageOffset < maxOffset;
+            FontHelper.renderFontCentered(sb, font, "◀ 上一页",
+                    boxX + 50.0f * Settings.scale, barY,
+                    hasPrev ? new Color(0.98f, 0.82f, 0.35f, 1.0f) : new Color(0.45f, 0.45f, 0.45f, 1.0f));
+            // 下一页（往最新翻）
+            boolean hasNext = pageOffset > 0;
+            FontHelper.renderFontCentered(sb, font, "下一页 ▶",
+                    boxX + boxW - 50.0f * Settings.scale, barY,
+                    hasNext ? new Color(0.98f, 0.82f, 0.35f, 1.0f) : new Color(0.45f, 0.45f, 0.45f, 1.0f));
         }
 
         // 输入入口：输入模式显示输入文本，否则显示提示
@@ -139,7 +170,41 @@ public final class ChatBoxUi {
                 inputMode = false; // 点击别处 → 退出输入模式（不发送）
                 inputText.setLength(0);
             }
+            // 翻页按钮（仅消息超一屏时可用）
+            if (handlePageClick(mx, my)) {
+                return;
+            }
         }
+    }
+
+    /** 处理翻页按钮点击：返回 true 表示点到了翻页条。 */
+    private boolean handlePageClick(float mx, float my) {
+        int total = core.messages().size();
+        int maxOffset = Math.max(0, total - MAX_LINES);
+        if (maxOffset <= 0) {
+            return false;
+        }
+        float barY = boxY + boxH - 40.0f * Settings.scale;
+        float barTop = barY + 16.0f * Settings.scale;
+        float barBot = barY - 16.0f * Settings.scale;
+        if (my > barTop || my < barBot) {
+            return false;
+        }
+        // 上一页按钮：面板左端 100px 宽
+        if (mx >= boxX && mx <= boxX + 100.0f * Settings.scale) {
+            if (pageOffset < maxOffset) {
+                pageOffset = Math.min(maxOffset, pageOffset + MAX_LINES);
+            }
+            return true;
+        }
+        // 下一页按钮：面板右端 100px 宽
+        if (mx >= boxX + boxW - 100.0f * Settings.scale && mx <= boxX + boxW) {
+            if (pageOffset > 0) {
+                pageOffset = Math.max(0, pageOffset - MAX_LINES);
+            }
+            return true;
+        }
+        return false;
     }
 
     private boolean isInInputArea(float mx, float my) {
