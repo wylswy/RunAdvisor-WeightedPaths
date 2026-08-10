@@ -49,6 +49,8 @@ public final class RunLogModels {
         public String playerChosen = "";
         /** 玩家是否跳过了本次卡奖。 */
         public boolean playerSkipped = false;
+        /** 本次卡奖是否为「记仇使坏」（推荐指向最差卡逗玩家）。 */
+        public boolean mischief = false;
     }
 
     public static final class CardChoiceLog {

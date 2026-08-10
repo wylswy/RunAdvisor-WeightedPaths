@@ -6,7 +6,7 @@
     <!-- Change These to match your mod -->
     <groupId>com.derekjass.sts</groupId>
     <artifactId>weighted-paths</artifactId>
-    <version>1.4.9</version>
+    <version>1.5.0</version>
     <packaging>jar</packaging>
     <name>Run Advisor</name>
     <description>Map path recommendations, seed previews, and Silent card scoring.</description>

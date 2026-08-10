@@ -40,6 +40,8 @@ public class CardRewardRenderPatch {
     private static final Color GRADE_C = new Color(0.95f, 0.45f, 0.45f, 1.0f);
     private static final Color RECOMMENDED_COLOR = new Color(0.35f, 1.0f, 0.55f, 1.0f);
     private static final Color SKIP_HINT_COLOR = new Color(1.0f, 0.72f, 0.35f, 1.0f);
+    // 记仇使坏推荐的标签色：橙色，提醒玩家「这是在逗你」，不是真推荐
+    private static final Color MISCHIEF_COLOR = new Color(1.0f, 0.72f, 0.35f, 1.0f);
     // 抓牌历史"已有 N 张"的次要文字色
     private static final Color HAVING_COLOR = new Color(0.78f, 0.78f, 0.78f, 1.0f);
     private static String lastRewardLogKey = "";
@@ -132,6 +134,7 @@ public class CardRewardRenderPatch {
                 }
             }
 
+            boolean isMischief = lastWasMischief && ai != null && ai.valid && !ai.skipAll;
             for (AbstractCard card : __instance.rewardGroup) {
                 if (card == null) {
                     continue;
@@ -141,7 +144,7 @@ public class CardRewardRenderPatch {
                     continue;
                 }
                 boolean isPick = !skipAll && card == bestCard;
-                drawRecommendation(sb, card, rec, isPick, ai);
+                drawRecommendation(sb, card, rec, isPick, ai, isMischief);
             }
 
             if (skipAll) {
@@ -173,10 +176,6 @@ public class CardRewardRenderPatch {
         }
         aiRequestedKey = key;
         aiRec = null; // 新卡奖：清空旧决策，渲染先回落规则兜底
-        final AiRecommender recommender = createDefaultRecommender();
-        if (recommender == null) {
-            return; // 未配置 key：完全走规则，无 AI
-        }
         java.util.ArrayList<AiRecommendationEngine.Candidate> candidates = new java.util.ArrayList<>();
         java.util.Set<String> ids = new java.util.HashSet<>();
         for (AbstractCard card : screen.rewardGroup) {
@@ -190,17 +189,32 @@ public class CardRewardRenderPatch {
             ids.add(card.cardID);
         }
 
-        // 记仇时：故意推最差的卡逗玩家（看你还信不信它），不依赖 AI 网络，稳定可触发
+        // 记仇使坏：本地决策，不依赖 AI key（无 key 也稳定触发，符合注释原意）。
+        // 先看本次卡奖有没有 A/S 级高分卡（score>=60）——有则绝不使坏，
+        // 高分 key 卡不能拿来赌气（玩家当真会亏局），照常走真推荐；只对平庸卡奖使坏
+        boolean hasHighValueCard = false;
+        for (AiRecommendationEngine.Candidate c : candidates) {
+            if (c != null && c.score >= 60.0) {
+                hasHighValueCard = true;
+                break;
+            }
+        }
         if (com.derekjass.sts.weightedpaths.creative.CardMoodEngine.currentMood()
-                == com.derekjass.sts.weightedpaths.creative.CardMoodEngine.Mood.RESENTFUL) {
+                == com.derekjass.sts.weightedpaths.creative.CardMoodEngine.Mood.RESENTFUL && !hasHighValueCard) {
             AiRecommendation mischief = AiRecommendationEngine.mischiefDecision(candidates);
             if (mischief.valid) {
                 aiRec = mischief;
                 lastWasMischief = true;
+                RunAdvisorLogger.markLastRewardMischief(mischief.recommendedId);
             }
             return;
         }
         lastWasMischief = false;
+
+        final AiRecommender recommender = createDefaultRecommender();
+        if (recommender == null) {
+            return; // 未配置 key：纯规则（使坏已在上面处理，AI 拍板走规则兜底）
+        }
 
         final int favor = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor();
         final String mood = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.currentMood().name();
@@ -336,11 +350,17 @@ public class CardRewardRenderPatch {
     }
 
     private static void drawRecommendation(
-            SpriteBatch sb, AbstractCard card, CardRecommendation rec, boolean recommended, AiRecommendation ai) {
+            SpriteBatch sb, AbstractCard card, CardRecommendation rec, boolean recommended,
+            AiRecommendation ai, boolean isMischief) {
         float cx = card.hb.cX;
         float cy = card.hb.cY + card.hb.height + (36.0f * Settings.scale);
-        String label = recommended ? CardUiStrings.PICK_RECOMMENDED : rec.gradeLabel();
-        Color color = recommended ? RECOMMENDED_COLOR : gradeColor(rec.grade);
+        // 记仇使坏：标签换成「逗你的」+橙色，与真推荐（绿「推荐」）视觉区分，玩家一眼能看出是玩笑
+        String label = recommended
+                ? (isMischief ? CardUiStrings.PICK_MISCHIEF : CardUiStrings.PICK_RECOMMENDED)
+                : rec.gradeLabel();
+        Color color = recommended
+                ? (isMischief ? MISCHIEF_COLOR : RECOMMENDED_COLOR)
+                : gradeColor(rec.grade);
 
         if (ModFonts.header != null) {
             FontHelper.renderFontCentered(sb, ModFonts.header, label, cx, cy, color);

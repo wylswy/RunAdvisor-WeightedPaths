@@ -83,7 +83,9 @@ public final class CardAttitudeEngine {
             CardMoodEngine.recordCompliance(); // 它被你的信任打动了
             return pick(POOL_MISCHIEF_TRICKED);
         }
-        CardMoodEngine.recordDefiance(); // 你没上当，它有点受挫，更记仇
+        // 没上当：它嘴硬，但「你居然没被带偏」反而让它放心，不再更记仇。
+        // 原设计是 recordDefiance（-2）→ 死循环：不道歉就一直使坏、推荐长期失真。
+        CardMoodEngine.recordCompliance();
         return applyMood(pick(POOL_MISCHIEF_UNTRICKED));
     }
 
@@ -242,10 +244,10 @@ public final class CardAttitudeEngine {
             "耶，你上钩啦！逗你的那张你也抓。行吧，看在你这么信我的份上，不跟你记仇了。"
     };
 
-    /** 记仇使坏没成功：玩家没上当 —— 它嘴硬地有点受挫。 */
+    /** 记仇使坏没成功：玩家没上当 —— 它嘴硬，但「你清醒没被带偏」反而让它放心，不闹了。 */
     private static final String[] POOL_MISCHIEF_UNTRICKED = {
-            "你居然没有上当……哼，行，算你有点眼光。",
-            "啧，那张是我故意推来逗你的，你居然没中计。失策失策。",
-            "没上当啊？我还以为你会乖乖抓我推的那张呢。罢了，算你聪明。"
+            "你居然没有上当……哼，行，算你清醒。我不闹了。",
+            "啧，那张是我故意推来逗你的，你居然没中计。罢了，我放心了。",
+            "没上当啊？我还以为你会乖乖抓我推的那张呢。算了，算你聪明，这回合算你赢。"
     };
 }

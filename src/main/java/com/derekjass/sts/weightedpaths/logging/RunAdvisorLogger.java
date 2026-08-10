@@ -63,7 +63,7 @@ public final class RunAdvisorLogger {
         current.seed = Settings.seed == null ? "" : Settings.seed.toString();
         current.ascension = AbstractDungeon.ascensionLevel;
         current.character = characterName(AbstractDungeon.player);
-        current.meta.put("modVersion", "1.4.9");
+        current.meta.put("modVersion", "1.5.0");
 
         try {
             File dir = logDirectory();
@@ -150,6 +150,26 @@ public final class RunAdvisorLogger {
         }
         lastReward.playerChosen = cardId == null ? "" : cardId;
         lastReward.playerSkipped = skipped;
+        flushSummary();
+    }
+
+    /**
+     * 标记最近一次卡奖为「记仇使坏」，并把日志中 recommended 重排为实际展示的使坏推荐卡。
+     * 供离线分析排除/单列使坏卡奖，避免污染「推荐 vs 违推荐」统计（日志记录的是规则推荐，
+     * 而屏幕展示的是使坏推荐，两口径必须对齐）。
+     *
+     * @param mischiefCardId 使坏推荐的（最差）卡 ID
+     */
+    public static void markLastRewardMischief(String mischiefCardId) {
+        if (!isEnabled() || current == null || lastReward == null) {
+            return;
+        }
+        lastReward.mischief = true;
+        if (mischiefCardId != null && !mischiefCardId.isEmpty()) {
+            for (RunLogModels.CardChoiceLog c : lastReward.choices) {
+                c.recommended = mischiefCardId.equals(c.cardId);
+            }
+        }
         flushSummary();
     }
 

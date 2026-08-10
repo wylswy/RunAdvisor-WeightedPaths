@@ -72,12 +72,12 @@ public class CardAttitudeEngineTest {
     }
 
     @Test
-    public void mischiefUntricked_returnsStubbornLineAndLowersFavor() {
+    public void mischiefUntricked_returnsStubbornLineAndDoesNotLoseFavor() {
         CardMoodEngine.reset();
         int before = CardMoodEngine.favor();
         String line = CardAttitudeEngine.evaluateMischiefResult(false);
         assertTrue("没上当应生成嘴硬台词", line != null && !line.isEmpty());
-        assertTrue("没上当后好感度应下降", CardMoodEngine.favor() < before);
+        assertTrue("没上当后好感度不应再降(给原谅台阶,破死循环)", CardMoodEngine.favor() >= before);
     }
 
     @Test

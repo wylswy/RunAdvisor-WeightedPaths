@@ -2,7 +2,7 @@
 
 杀戮尖塔一代 Mod：地图路线推荐、种子各幕预览、静默猎手 A20 卡奖评分。基于 [sts-weighted-paths](https://github.com/derekjass/sts-weighted-paths)（MIT）扩展。
 
-**当前版本：1.4.9**（猎手 A20 三端口卡奖 + 路线）
+**当前版本：1.5.0**（AI 拍板推荐 + 卡会记得你/会记仇/会陪你聊天）
 
 ## 依赖
 
