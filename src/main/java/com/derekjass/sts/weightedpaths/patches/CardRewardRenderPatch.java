@@ -57,6 +57,8 @@ public class CardRewardRenderPatch {
     private static volatile AiRecommendation aiRec;
     /** 已发起 AI 请求的卡奖 key（避免每帧重复请求）。 */
     private static volatile String aiRequestedKey = "";
+    /** 本次卡奖是否为「记仇使坏」（AI 故意推坏卡逗玩家）。 */
+    private static volatile boolean lastWasMischief = false;
 
     public static void resetRewardLogCache() {
         lastRewardLogKey = "";
@@ -194,9 +196,11 @@ public class CardRewardRenderPatch {
             AiRecommendation mischief = AiRecommendationEngine.mischiefDecision(candidates);
             if (mischief.valid) {
                 aiRec = mischief;
+                lastWasMischief = true;
             }
             return;
         }
+        lastWasMischief = false;
 
         final int favor = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor();
         final String mood = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.currentMood().name();
@@ -440,6 +444,18 @@ public class CardRewardRenderPatch {
             String chosenGrade = skipped ? "" : lastRewardGrades.getOrDefault(chosenId, "");
             String context = "当前第" + AbstractDungeon.actNum + "层";
             ChatBoxUi.get().core().setGameContext(context);
+            // 记仇使坏场景：不走「违背推荐」的通用台词，改走「上当/没上当」的专属反馈
+            if (lastWasMischief && finalAi != null && finalAi.valid && !finalAi.skipAll) {
+                boolean playerTricked = !skipped && finalAi.recommendedId != null
+                        && finalAi.recommendedId.equals(chosenId);
+                String mischiefLine = CardAttitudeEngine.evaluateMischiefResult(playerTricked);
+                if (!mischiefLine.isEmpty()) {
+                    ChatBoxUi.get().core().addCardMessage(mischiefLine);
+                }
+                lastWasMischief = false;
+                aiRec = null;
+                return;
+            }
             // 卡的态度：检测是否违背推荐，生成待显示台词
             CardAttitudeEngine.evaluateReward(recommendedName, recommendedSkipAll, chosenName, skipped, chosenGrade);
             // 卡的态度台词 → 聊天框（它"主动开口"）
@@ -451,6 +467,7 @@ public class CardRewardRenderPatch {
             CardAttitudeEngine.enrichWithAi(recommendedName, recommendedSkipAll, chosenName, skipped, chosenGrade, context);
             // 卡奖结束：清空 AI 决策，避免残留到下一张卡奖
             aiRec = null;
+            lastWasMischief = false;
         }
     }
 

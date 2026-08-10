@@ -70,6 +70,23 @@ public final class CardAttitudeEngine {
         }
     }
 
+    /**
+     * 记仇使坏的结果反馈：玩家上当抓了坏卡 → 它得意又开心（好感度被信任打动回升）；
+     * 玩家没上当 → 它嘴硬地说你居然没中计（好感度再降一点）。
+     * 生成一句台词供聊天框显示，返回是否产生了台词。
+     *
+     * @param playerTricked 玩家是否真的抓了它故意推的那张坏卡
+     * @return 待显示台词；无则返回空串
+     */
+    public static String evaluateMischiefResult(boolean playerTricked) {
+        if (playerTricked) {
+            CardMoodEngine.recordCompliance(); // 它被你的信任打动了
+            return pick(POOL_MISCHIEF_TRICKED);
+        }
+        CardMoodEngine.recordDefiance(); // 你没上当，它有点受挫，更记仇
+        return applyMood(pick(POOL_MISCHIEF_UNTRICKED));
+    }
+
     /** 按当前好感度给台词加语气：记仇加「哼！」、不高兴加「哼，」。 */
     private static String applyMood(String line) {
         if (line == null) {
@@ -215,5 +232,20 @@ public final class CardAttitudeEngine {
             "{A} 你不要，挑了张 C 级的 {B}。你呀……没事，我罩着你，咱慢慢来。",
             "这张 {B} 我心里没底，不过你要，我就陪你。大不了多护你几回。",
             "放着好好的 {A} 不拿，偏要这张 {B}。行，谁让我惯着你呢。"
+    };
+
+    /** 记仇使坏成功：玩家上当抓了那张坏卡 —— 它得意又开心。 */
+    private static final String[] POOL_MISCHIEF_TRICKED = {
+            "哈哈哈哈你真信我推的那张啦？笨哦，我故意的！不过……你居然这么信我。",
+            "你上当啦！那张卡其实一般般。可你肯听我的，我心里一下就好受多了。",
+            "我就知道你会顺着我抓那张。小傻瓜，这回算你猜对——虽然卡不咋样，但我原谅你啦。",
+            "耶，你上钩啦！逗你的那张你也抓。行吧，看在你这么信我的份上，不跟你记仇了。"
+    };
+
+    /** 记仇使坏没成功：玩家没上当 —— 它嘴硬地有点受挫。 */
+    private static final String[] POOL_MISCHIEF_UNTRICKED = {
+            "你居然没有上当……哼，行，算你有点眼光。",
+            "啧，那张是我故意推来逗你的，你居然没中计。失策失策。",
+            "没上当啊？我还以为你会乖乖抓我推的那张呢。罢了，算你聪明。"
     };
 }

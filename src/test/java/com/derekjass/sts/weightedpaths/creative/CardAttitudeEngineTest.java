@@ -63,6 +63,41 @@ public class CardAttitudeEngineTest {
         assertFalse("消费后应清空", CardAttitudeEngine.hasPending());
     }
 
+    @Test
+    public void mischiefTricked_returnsHappyLine() {
+        CardMoodEngine.reset();
+        String line = CardAttitudeEngine.evaluateMischiefResult(true);
+        assertTrue("上当应生成得意台词", line != null && !line.isEmpty());
+        assertTrue("上当后好感度应回升", CardMoodEngine.favor() >= 0);
+    }
+
+    @Test
+    public void mischiefUntricked_returnsStubbornLineAndLowersFavor() {
+        CardMoodEngine.reset();
+        int before = CardMoodEngine.favor();
+        String line = CardAttitudeEngine.evaluateMischiefResult(false);
+        assertTrue("没上当应生成嘴硬台词", line != null && !line.isEmpty());
+        assertTrue("没上当后好感度应下降", CardMoodEngine.favor() < before);
+    }
+
+    @Test
+    public void mischiefTricked_lineIsCheerfulNotStubborn() {
+        CardMoodEngine.reset();
+        // 上当台词来自得意池，不应带「没上当」的嘴硬标记
+        String line = CardAttitudeEngine.evaluateMischiefResult(true);
+        assertFalse("上当台词不应说「没上当」", line.contains("没上当"));
+        assertTrue("上当台词应带得意语气", line.contains("哈哈") || line.contains("上当")
+                || line.contains("上钩") || line.contains("原谅"));
+    }
+
+    @Test
+    public void mischiefUntricked_lineIsStubborn() {
+        CardMoodEngine.reset();
+        String line = CardAttitudeEngine.evaluateMischiefResult(false);
+        assertTrue("没上当台词应提及没上当，实际=[" + line + "]",
+                line.contains("没上当") || line.contains("没有上当") || line.contains("没中计"));
+    }
+
     private static void assertEquals(String msg, Object expected, Object actual) {
         if (!expected.equals(actual)) {
             throw new AssertionError(msg + "：期望=" + expected + " 实际=" + actual);
