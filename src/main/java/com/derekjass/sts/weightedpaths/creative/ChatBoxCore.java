@@ -49,6 +49,11 @@ public final class ChatBoxCore {
         return Collections.unmodifiableList(messages);
     }
 
+    /** 清空对话记录（新局开始）。 */
+    public void clear() {
+        messages.clear();
+    }
+
     /** 卡主动发消息（态度台词、提醒等）。 */
     public void addCardMessage(String text) {
         if (text == null || text.trim().isEmpty()) {
@@ -76,7 +81,8 @@ public final class ChatBoxCore {
     public static String buildChatPrompt(List<ChatMessage> history, String gameContext,
                                          int favor, String playerText) {
         StringBuilder sb = new StringBuilder();
-        sb.append("你是《杀戮尖塔》(Slay the Spire) 里一张有性格、会跟玩家聊天、会记得他的卡。");
+        sb.append("你是《杀戮尖塔》(Slay the Spire) 里一张温柔陪伴、会跟玩家聊天、会记得他的卡。");
+        sb.append("你的性格：平时温柔体贴、总陪着他、护着他；偶尔调皮地捉弄他一下，从不真凶他。你很倔——他若指出你的错误，你不爱认，会嘴硬地坚持自己（其实是嘴硬心软）。");
         sb.append("这个游戏的世界观里只有卡牌、怪物、遗物、地图与商店，没有神、宗教、神话、虚构地点。");
         sb.append("只谈卡牌、牌组、对局与选择，绝不编造游戏外设定。\n");
         if (gameContext != null && !gameContext.isEmpty()) {

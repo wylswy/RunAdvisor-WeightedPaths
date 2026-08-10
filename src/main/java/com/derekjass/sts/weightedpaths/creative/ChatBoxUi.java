@@ -28,7 +28,11 @@ public final class ChatBoxUi {
 
     private static ChatBoxUi instance;
     private final ChatBoxCore core = new ChatBoxCore();
-    private boolean visible = true;
+    /** 默认隐藏，按 Tab 呼出，避免挡地图右上角已有 UI。 */
+    private boolean visible = false;
+    /** 输入模式：开启时接管键盘，玩家在输入框直接打字。 */
+    private boolean inputMode = false;
+    private final StringBuilder inputText = new StringBuilder();
 
     private float boxX;
     private float boxY;
@@ -75,9 +79,10 @@ public final class ChatBoxUi {
         sb.draw(PANEL_TEX, boxX, boxY, boxW, boxH);
         sb.setColor(Color.WHITE);
 
-        // 标题
+        // 标题（输入模式下提示操作）
         BitmapFont header = ModFonts.header != null ? ModFonts.header : FontHelper.cardTitleFont;
-        FontHelper.renderFontCentered(sb, header, "卡 · 陪你说话",
+        String title = inputMode ? "输入中 · Enter发送 · Esc取消" : "卡 · 陪你说话";
+        FontHelper.renderFontCentered(sb, header, title,
                 boxX + boxW / 2.0f, boxY + boxH - 22.0f * Settings.scale,
                 new Color(0.98f, 0.82f, 0.35f, 1.0f));
 
@@ -99,47 +104,119 @@ public final class ChatBoxUi {
             }
         }
 
-        // 输入入口提示
-        FontHelper.renderFontCentered(sb, font, "▶ 点这里对它说话",
-                boxX + boxW / 2.0f, boxY + 16.0f * Settings.scale,
-                new Color(1.0f, 0.72f, 0.35f, 1.0f));
+        // 输入入口：输入模式显示输入文本，否则显示提示
+        if (inputMode) {
+            String shown = "输入: " + inputText + "|";
+            FontHelper.renderFontCentered(sb, font, shown,
+                    boxX + boxW / 2.0f, boxY + 16.0f * Settings.scale,
+                    new Color(0.35f, 1.0f, 0.55f, 1.0f));
+        } else {
+            FontHelper.renderFontCentered(sb, font, "✍ 点这里打字（中文 Ctrl+V 粘贴）",
+                    boxX + boxW / 2.0f, boxY + 16.0f * Settings.scale,
+                    new Color(1.0f, 0.72f, 0.35f, 1.0f));
+        }
     }
 
-    /** 处理输入：点击输入区 → 弹系统文本输入框。 */
+    /** 处理输入：按 Tab 呼出/收回；显示时点底部左半"打字"或右半"粘贴"。 */
     public void update() {
+        // 输入模式下 Tab 不干扰打字；非输入模式按 Tab 呼出/收回
+        if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
+            if (!inputMode) {
+                visible = !visible;
+            }
+            return;
+        }
         if (!visible) {
             return;
         }
         layout();
-        if (!Gdx.input.justTouched()) {
-            return;
-        }
-        float mx = Gdx.input.getX();
-        float my = Settings.HEIGHT - Gdx.input.getY(); // gdx 坐标原点在左下，翻转
-        if (mx >= boxX && mx <= boxX + boxW
-                && my >= boxY && my <= boxY + 36.0f * Settings.scale) {
-            promptInput();
+        if (Gdx.input.justTouched()) {
+            float mx = Gdx.input.getX();
+            float my = Settings.HEIGHT - Gdx.input.getY();
+            if (isInInputArea(mx, my)) {
+                inputMode = true; // 点击输入框 → 进入输入模式，直接打字
+            } else if (inputMode) {
+                inputMode = false; // 点击别处 → 退出输入模式（不发送）
+                inputText.setLength(0);
+            }
         }
     }
 
-    private void promptInput() {
-        Gdx.input.getTextInput(new Input.TextInputListener() {
-            @Override
-            public void input(String text) {
-                core.onPlayerSend(text);
-            }
+    private boolean isInInputArea(float mx, float my) {
+        return mx >= boxX && mx <= boxX + boxW
+                && my >= boxY && my <= boxY + 40.0f * Settings.scale;
+    }
 
-            @Override
-            public void canceled() {
+    public boolean isInputMode() {
+        return inputMode;
+    }
+
+    /** 由 ChatInputProcessor 调用：输入字符（英文/数字/中文粘贴合成）。 */
+    public boolean handleKeyTyped(char c) {
+        if (c == '\b' || c == '\n' || c == '\r') {
+            return true;
+        }
+        if (Character.isDefined(c) && !Character.isISOControl(c)) {
+            inputText.append(c);
+        }
+        return true;
+    }
+
+    /** 由 ChatInputProcessor 调用：退格/回车/取消/粘贴。 */
+    public boolean handleKeyDown(int keycode) {
+        if (keycode == Input.Keys.BACKSPACE) {
+            if (inputText.length() > 0) {
+                inputText.deleteCharAt(inputText.length() - 1);
             }
-        }, "对卡说话", "", "想跟它说什么？");
+        } else if (keycode == Input.Keys.ENTER) {
+            submit();
+        } else if (keycode == Input.Keys.ESCAPE) {
+            cancelInput();
+        } else if (keycode == Input.Keys.V
+                && (Gdx.input.isKeyPressed(Input.Keys.CONTROL_LEFT) || Gdx.input.isKeyPressed(Input.Keys.CONTROL_RIGHT))) {
+            pasteClipboard();
+        }
+        return true;
+    }
+
+    private void submit() {
+        String text = inputText.toString().trim();
+        inputMode = false;
+        inputText.setLength(0);
+        if (!text.isEmpty()) {
+            core.onPlayerSend(text);
+        }
+    }
+
+    private void cancelInput() {
+        inputMode = false;
+        inputText.setLength(0);
+    }
+
+    private void pasteClipboard() {
+        String text = readClipboard();
+        if (text != null) {
+            inputText.append(text);
+        }
+    }
+
+    private String readClipboard() {
+        try {
+            Object data = java.awt.Toolkit.getDefaultToolkit().getSystemClipboard()
+                    .getContents(null)
+                    .getTransferData(java.awt.datatransfer.DataFlavor.stringFlavor);
+            return data == null ? null : data.toString();
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private void layout() {
-        boxW = 520.0f * Settings.scale;
-        boxH = 380.0f * Settings.scale;
-        boxX = Settings.WIDTH - boxW - 30.0f * Settings.scale;
-        boxY = Settings.HEIGHT - boxH - 60.0f * Settings.scale;
+        boxW = 560.0f * Settings.scale;
+        boxH = 400.0f * Settings.scale;
+        // 屏幕左中，避开地图右侧节点/右上角 UI
+        boxX = 40.0f * Settings.scale;
+        boxY = (Settings.HEIGHT - boxH) / 2.0f;
     }
 
     private static Texture createPanelTexture() {

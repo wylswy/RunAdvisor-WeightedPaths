@@ -2,6 +2,7 @@ package com.derekjass.sts.weightedpaths;
 
 import basemod.BaseMod;
 import basemod.interfaces.PostInitializeSubscriber;
+import basemod.interfaces.StartGameSubscriber;
 import com.derekjass.sts.weightedpaths.helpers.RelicTracker;
 import com.derekjass.sts.weightedpaths.paths.MapPath;
 import com.derekjass.sts.weightedpaths.paths.PathSymbolCounts;
@@ -14,6 +15,9 @@ import com.derekjass.sts.weightedpaths.seed.SeedDecodeHook;
 import com.derekjass.sts.weightedpaths.ui.path.ActPreviewRenderer;
 import com.derekjass.sts.weightedpaths.ui.path.BestPathRenderer;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
+import com.derekjass.sts.weightedpaths.creative.ChatInputProcessor;
+import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
+import com.derekjass.sts.weightedpaths.creative.CardMoodEngine;
 import com.evacipated.cardcrawl.modthespire.lib.SpireInitializer;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
@@ -29,7 +33,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 @SpireInitializer
-public class WeightedPaths implements PostInitializeSubscriber {
+public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscriber {
 
     private static final Logger logger = LogManager.getLogger(WeightedPaths.class.getName());
 
@@ -245,6 +249,15 @@ public class WeightedPaths implements PostInitializeSubscriber {
         SeedDecodeHook.initialize();
         ActPreviewRenderer.initialize();
         Config.initialize();
+        // 包装输入处理器：让聊天框能接收键盘（英文直接打字，中文 Ctrl+V 粘贴）
+        ChatInputProcessor.install();
         logger.info("Run Advisor 1.4.9 更新：① 评分器可测性重构+80测试；② 幽魂形态不早期砍分；③ 一层权重火堆≈商店>小怪>事件>精英；④ 决策日志默认开启（数据分析选牌）。");
+    }
+
+    /** 新局开始：清空上一局的聊天记录与好感度，避免跨局残留。 */
+    @Override
+    public void receiveStartGame() {
+        ChatBoxUi.get().core().clear();
+        CardMoodEngine.reset();
     }
 }
