@@ -11,6 +11,7 @@ public final class RunLogModels {
     public static final class RunSummary {
         public String runId;
         public String seed;
+        public long seedSourceTimestamp;
         public long startedAtMs;
         public Long endedAtMs;
         public int ascension;

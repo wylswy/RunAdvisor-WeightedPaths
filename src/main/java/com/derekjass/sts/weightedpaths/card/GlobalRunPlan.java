@@ -124,29 +124,15 @@ public final class GlobalRunPlan {
         if (best == null || best.isEmpty()) {
             return Collections.emptyList();
         }
-        MapRoomNode current = AbstractDungeon.getCurrMapNode();
         List<String> upcoming = new ArrayList<>();
-        boolean afterCurrent = current == null;
-
+        // 关键：MapPath 在首房选定后是从「当前节点的边」开始生成的，路径本身不包含当前节点，
+        // 所以整条 best 就是「当前位置前方」的路线，直接全量收集即可。
+        // 旧实现试图在 best 里找 current 再跳过——但 current 根本不在路径里，
+        // 导致首房之后 upcomingThisAct 恒为空，精英压力/剩余火堆/AOE 需求全部失效。
         for (MapRoomNode node : best) {
-            if (!afterCurrent) {
-                if (node == current) {
-                    afterCurrent = true;
-                }
-                continue;
-            }
             String symbol = RouteFormatUtil.symbolOrEmpty(node);
             if (!symbol.isEmpty()) {
                 upcoming.add(symbol);
-            }
-        }
-
-        if (upcoming.isEmpty() && current == null) {
-            for (MapRoomNode node : best) {
-                String symbol = RouteFormatUtil.symbolOrEmpty(node);
-                if (!symbol.isEmpty()) {
-                    upcoming.add(symbol);
-                }
             }
         }
         return upcoming;

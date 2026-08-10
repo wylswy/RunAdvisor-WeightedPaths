@@ -48,7 +48,10 @@ public final class GlobalRunPlanner {
                 ? RouteSimState.fromCurrentRun()
                 : RouteSimState.forFutureAct(act.actNumber);
         for (OracleMapPath path : paths) {
-            path.valuate(storeGold, act.actNumber, state);
+            // 关键：每条路线必须用 state 的副本估值——PathValuation 会原地修改 state
+            // （血量/金币/dead/act1ElitesOnPath），共用同一实例会让后一条路线继承
+            // 前一条的模拟结果；一旦某条路线"模拟死亡"，其后所有路线都会判死。
+            path.valuate(storeGold, act.actNumber, state.copy());
         }
         paths.sort(Collections.reverseOrder());
         OracleMapPath best = paths.get(0);

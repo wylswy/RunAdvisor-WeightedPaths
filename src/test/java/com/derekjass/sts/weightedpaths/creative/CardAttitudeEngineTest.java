@@ -77,7 +77,7 @@ public class CardAttitudeEngineTest {
         int before = CardMoodEngine.favor();
         String line = CardAttitudeEngine.evaluateMischiefResult(false);
         assertTrue("没上当应生成嘴硬台词", line != null && !line.isEmpty());
-        assertTrue("没上当后好感度不应再降(给原谅台阶,破死循环)", CardMoodEngine.favor() >= before);
+        assertEquals("没上当（明着坏下正常反应）好感度应不变", before, CardMoodEngine.favor());
     }
 
     @Test

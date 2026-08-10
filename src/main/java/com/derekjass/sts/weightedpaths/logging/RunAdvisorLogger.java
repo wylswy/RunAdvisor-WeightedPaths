@@ -46,7 +46,10 @@ public final class RunAdvisorLogger {
             return;
         }
         String seed = Settings.seed.toString();
-        if (current == null || !seed.equals(current.seed)) {
+        long ts = Settings.seedSourceTimestamp;
+        // 用 seed + seedSourceTimestamp 识别对局（与 SL 检测同一指纹）：
+        // 仅比 seed 会在「同 seed 弃局后重开」时复用上一局日志，数据串局
+        if (current == null || !seed.equals(current.seed) || ts != current.seedSourceTimestamp) {
             onRunStart();
         }
     }
@@ -61,6 +64,7 @@ public final class RunAdvisorLogger {
         current.runId = UUID.randomUUID().toString().substring(0, 8);
         current.startedAtMs = System.currentTimeMillis();
         current.seed = Settings.seed == null ? "" : Settings.seed.toString();
+        current.seedSourceTimestamp = Settings.seedSourceTimestamp;
         current.ascension = AbstractDungeon.ascensionLevel;
         current.character = characterName(AbstractDungeon.player);
         current.meta.put("modVersion", "1.5.0");

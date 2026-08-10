@@ -126,4 +126,40 @@ public class ChatBoxCoreTest {
         assertEquals("SL 恢复后打开次数继续累积", 2, core.openCount());
         assertEquals("SL 恢复后消息数继续累积", 2, core.playerMessageCount());
     }
+
+    @Test
+    public void clear_resetsProbeCounters() {
+        ChatBoxCore core = new ChatBoxCore();
+        core.recordOpen();
+        core.onPlayerSend("一句");
+        core.clear(); // 新局开始：探针回到 per-run 口径
+        assertEquals("清空后打开计数应归零", 0, core.openCount());
+        assertEquals("清空后消息计数应归零", 0, core.playerMessageCount());
+    }
+
+    @Test
+    public void recentPlayerMessages_returnsNewestFirst() {
+        ChatBoxCore core = new ChatBoxCore();
+        core.addCardMessage("开场白"); // 卡消息应被跳过
+        core.onPlayerSend("第一条");
+        core.onPlayerSend("第二条");
+        core.onPlayerSend("第三条");
+        List<String> recent = core.recentPlayerMessages(3);
+        assertEquals("应取最近 3 条玩家消息", 3, recent.size());
+        assertEquals("最近一条应排最前", "第三条", recent.get(0));
+        assertEquals("第二条", recent.get(1));
+        assertEquals("第一条", recent.get(2));
+    }
+
+    @Test
+    public void recentPlayerMessages_limitsAndSkipsBlank() {
+        ChatBoxCore core = new ChatBoxCore();
+        core.onPlayerSend("第一条");
+        core.onPlayerSend("   ");
+        core.onPlayerSend(null);
+        core.onPlayerSend("第二条");
+        assertEquals("空白/空消息不占位", 2, core.recentPlayerMessages(5).size());
+        assertEquals("超上限应截断", 1, core.recentPlayerMessages(1).size());
+        assertEquals("截断时取最新一条", "第二条", core.recentPlayerMessages(1).get(0));
+    }
 }

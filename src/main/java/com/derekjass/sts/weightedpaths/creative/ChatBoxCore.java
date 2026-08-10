@@ -90,9 +90,29 @@ public final class ChatBoxCore {
         return Collections.unmodifiableList(messages);
     }
 
-    /** 清空对话记录（新局开始）。 */
+    /**
+     * 记忆/探针用：最近最多 {@code max} 条玩家消息（新→旧顺序，跳过卡消息与空白）。
+     * 供长期陪伴结算时采集「玩家说过的话」——注意历史是正序存储，必须倒序遍历才是"最近"。
+     */
+    public List<String> recentPlayerMessages(int max) {
+        List<String> out = new ArrayList<>();
+        if (max <= 0) {
+            return out;
+        }
+        for (int i = messages.size() - 1; i >= 0 && out.size() < max; i--) {
+            ChatMessage m = messages.get(i);
+            if (m.sender == Sender.PLAYER && m.text != null && !m.text.trim().isEmpty()) {
+                out.add(m.text.trim());
+            }
+        }
+        return out;
+    }
+
+    /** 清空对话记录与探针计数（新局开始；SL 恢复用 {@link #restoreProbeStats} 找回计数）。 */
     public void clear() {
         messages.clear();
+        openCount = 0;
+        playerMessageCount = 0;
     }
 
     /** 恢复历史对话（SL 重进同一局）。按 sender 逐条加入。 */

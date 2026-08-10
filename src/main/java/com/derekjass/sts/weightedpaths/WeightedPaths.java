@@ -278,6 +278,8 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
             // 全新一局：清空旧对话 + 重置好感度，落盘新指纹
             core.clear();
             CardMoodEngine.reset();
+            // 卡奖去重缓存必须新局重置：日志关闭时它也会累积，否则跨局同楼层同卡组会串 key
+            com.derekjass.sts.weightedpaths.patches.CardRewardRenderPatch.resetRewardLogCache();
             // 长期陪伴：卡跨局认出你，按关系阶段开场（绝不进入推荐逻辑）
             PlayerRelation relation = PlayerRelation.get();
             core.addCardMessage(relation.greeting());

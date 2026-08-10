@@ -72,7 +72,7 @@ public final class CardAttitudeEngine {
 
     /**
      * 记仇使坏的结果反馈：玩家上当抓了坏卡 → 它得意又开心（好感度被信任打动回升）；
-     * 玩家没上当 → 它嘴硬地说你居然没中计（好感度再降一点）。
+     * 玩家没上当 → 它嘴硬一句（明着坏下不中计是清醒的正常反应：不惩罚也不奖励，好感度不变）。
      * 生成一句台词供聊天框显示，返回是否产生了台词。
      *
      * @param playerTricked 玩家是否真的抓了它故意推的那张坏卡
@@ -83,9 +83,9 @@ public final class CardAttitudeEngine {
             CardMoodEngine.recordCompliance(); // 它被你的信任打动了
             return pick(POOL_MISCHIEF_TRICKED);
         }
-        // 没上当：它嘴硬，但「你居然没被带偏」反而让它放心，不再更记仇。
-        // 原设计是 recordDefiance（-2）→ 死循环：不道歉就一直使坏、推荐长期失真。
-        CardMoodEngine.recordCompliance();
+        // 没上当：明着坏（理由明说"逗你的"）下，不中计是玩家正常/清醒的反应——
+        // 不惩罚（原 -2 会让记仇在无道歉时永不解锁）也不奖励（改 +1 会让记仇几次卡奖就自愈），
+        // 好感度不动，它只是嘴硬一句；真正解锁记仇只能靠道歉。
         return applyMood(pick(POOL_MISCHIEF_UNTRICKED));
     }
 

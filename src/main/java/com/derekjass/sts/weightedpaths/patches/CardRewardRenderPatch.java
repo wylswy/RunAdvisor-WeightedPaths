@@ -127,7 +127,7 @@ public class CardRewardRenderPatch {
                             com.derekjass.sts.weightedpaths.card.CardGrade.B, bestRec.score, bestRec.reason));
                 }
             }
-            maybeLogCardReward(__instance, detailed, bestCard, skipAll);
+            maybeLogCardReward(__instance, scored, detailed, bestCard, skipAll);
 
             // AI 拍板推荐：异步请求（每个卡奖一次），返回前渲染走规则兜底
             requestAiDecision(__instance, detailed, skipAll, buildDeckContext());
@@ -299,13 +299,11 @@ public class CardRewardRenderPatch {
 
     private static void maybeLogCardReward(
             CardRewardScreen screen,
+            java.util.HashMap<AbstractCard, CardRecommendation> scored,
             java.util.HashMap<AbstractCard, CardScorer.ScoredResult> detailed,
             AbstractCard bestCard,
             boolean skipAll) {
-        if (!RunAdvisorLogger.isEnabled()) {
-            return;
-        }
-        RunAdvisorLogger.ensureSession();
+        RunAdvisorLogger.ensureSession(); // 日志关闭时空操作；开启新局日志时重置卡奖缓存
         StringBuilder keyBuilder = new StringBuilder();
         keyBuilder.append(AbstractDungeon.floorNum).append(':');
         for (AbstractCard card : screen.rewardGroup) {
@@ -315,10 +313,11 @@ public class CardRewardRenderPatch {
         }
         String key = keyBuilder.toString();
         if (key.equals(lastRewardLogKey)) {
-            return;
+            return; // 同一卡奖重复渲染：推荐状态机只推进一次
         }
         lastRewardLogKey = key;
-        // 记录推荐信息（供 onClose 检测玩家是否违背）；并推进「卡的态度」台词显示
+        // 推荐状态机（卡的态度/记仇/违背检测）：与「决策日志」开关无关，永远执行——
+        // 否则玩家关闭日志后态度台词不再推进、违背检测会用到陈旧数据
         lastRecommendedId = bestCard == null ? "" : bestCard.cardID;
         lastSkipAll = skipAll;
         lastRewardGrades.clear();
@@ -329,13 +328,17 @@ public class CardRewardRenderPatch {
                 continue;
             }
             cardNameMap.put(card.cardID, card.name);
-            CardScorer.ScoredResult r = detailed.get(card);
-            if (r != null) {
-                lastRewardGrades.put(card.cardID, r.recommendation.grade.name());
+            // 用「显示口径」的评级（含 B 档提升），保证台词/日志与玩家看到的一致
+            CardRecommendation rec = scored.get(card);
+            if (rec != null) {
+                lastRewardGrades.put(card.cardID, rec.grade.name());
             }
         }
         CardAttitudeEngine.advanceForNewReward();
 
+        if (!RunAdvisorLogger.isEnabled()) {
+            return; // 日志关闭：状态机已维护，不写文件
+        }
         java.util.ArrayList<RunLogModels.CardChoiceLog> choices = new java.util.ArrayList<>();
         int index = 0;
         for (AbstractCard card : screen.rewardGroup) {
@@ -343,15 +346,16 @@ public class CardRewardRenderPatch {
                 continue;
             }
             CardScorer.ScoredResult result = detailed.get(card);
-            if (result == null) {
+            CardRecommendation rec = scored.get(card);
+            if (result == null || rec == null) {
                 continue;
             }
             boolean recommended = !skipAll && card == bestCard;
             choices.add(RunAdvisorLogger.choiceLog(
                     index,
                     card.cardID,
-                    result.recommendation.grade.name(),
-                    result.recommendation.score,
+                    rec.grade.name(),
+                    rec.score,
                     recommended,
                     result.breakdown));
             index++;

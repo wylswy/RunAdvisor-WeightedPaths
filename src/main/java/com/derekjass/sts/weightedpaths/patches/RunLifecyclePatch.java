@@ -20,19 +20,11 @@ public class RunLifecyclePatch {
 
     /** 采集本局玩家说过的话（最近最多 3 条非空），供卡真实引用。 */
     private static java.util.List<String> chatHighlights() {
-        java.util.List<String> out = new java.util.ArrayList<>();
         try {
-            for (ChatBoxCore.ChatMessage m : ChatBoxUi.get().core().messages()) {
-                if (m.sender == ChatBoxCore.Sender.PLAYER && m.text != null && !m.text.trim().isEmpty()) {
-                    out.add(m.text.trim());
-                    if (out.size() >= 3) {
-                        break;
-                    }
-                }
-            }
+            return ChatBoxUi.get().core().recentPlayerMessages(3);
         } catch (Exception ignored) {
+            return java.util.Collections.emptyList();
         }
-        return out;
     }
 
     /**

@@ -84,9 +84,21 @@ public final class RelationPersistence {
             if (data.lastRunSummary != null) {
                 root.add("lastRunSummary", toJson(data.lastRunSummary));
             }
+            // 原子写入：先写临时文件再整体替换，避免游戏崩溃/断电时档案损坏
+            File target = stateFile();
+            File tmp = new File(target.getParentFile(), FILE_NAME + ".tmp");
             try (OutputStreamWriter w = new OutputStreamWriter(
-                    new FileOutputStream(stateFile()), StandardCharsets.UTF_8)) {
+                    new FileOutputStream(tmp), StandardCharsets.UTF_8)) {
                 w.write(root.toString());
+            }
+            try {
+                java.nio.file.Files.move(tmp.toPath(), target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception e) {
+                // 替换失败：至少把临时文件清掉，不阻塞游戏
+                if (!tmp.delete()) {
+                    tmp.deleteOnExit();
+                }
             }
         } catch (Exception ignored) {
             // 落盘失败不致命
@@ -148,6 +160,13 @@ public final class RelationPersistence {
             }
             return d;
         } catch (Exception e) {
+            // 档案损坏（解析失败）：备份原文件再视为新玩家，避免下次结算静默覆盖掉可恢复数据
+            try {
+                File bak = new File(stateFile().getParentFile(), FILE_NAME + ".bak");
+                java.nio.file.Files.move(f.toPath(), bak.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception ignored) {
+            }
             return null;
         }
     }
