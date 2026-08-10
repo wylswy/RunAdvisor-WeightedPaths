@@ -65,7 +65,12 @@ public final class ChatBoxUi {
     }
 
     public void setVisible(boolean visible) {
+        boolean wasVisible = this.visible;
         this.visible = visible;
+        // 探针：聊天框从隐藏变显示（呼出）时计数，落盘供「玩家用不用聊天」数据分析
+        if (!wasVisible && visible) {
+            core.recordOpen();
+        }
     }
 
     /** 在地图界面渲染聊天框。 */
@@ -153,7 +158,7 @@ public final class ChatBoxUi {
         // 输入模式下 Tab 不干扰打字；非输入模式按 Tab 呼出/收回
         if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
             if (!inputMode) {
-                visible = !visible;
+                setVisible(!visible); // 统一走 setVisible：呼出时记录探针计数
             }
             return;
         }

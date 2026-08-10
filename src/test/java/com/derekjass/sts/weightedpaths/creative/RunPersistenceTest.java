@@ -35,7 +35,7 @@ public class RunPersistenceTest {
     public void saveAndIsSameRun_matchingFingerprint() {
         RunPersistence.setCustomDirForTest(tmpDir());
         RunPersistence.saveCurrentRun(SEED, TS, Arrays.asList(
-                new ChatMessage(Sender.CARD, "哼，你别乱抓"), new ChatMessage(Sender.PLAYER, "我错了")), 3);
+                new ChatMessage(Sender.CARD, "哼，你别乱抓"), new ChatMessage(Sender.PLAYER, "我错了")), 3, 0, 0);
         assertTrue("同 seed+ts 应判定为同一局(SL)",
                 RunPersistence.isSameRun(SEED, TS));
     }
@@ -43,7 +43,7 @@ public class RunPersistenceTest {
     @Test
     public void isSameRun_differentSeedIsNewRun() {
         RunPersistence.setCustomDirForTest(tmpDir());
-        RunPersistence.saveCurrentRun(SEED, TS, null, 0);
+        RunPersistence.saveCurrentRun(SEED, TS, null, 0, 0, 0);
         assertFalse("不同 seed 应为新局", RunPersistence.isSameRun(SEED + 1, TS));
         assertFalse("不同 ts 应为新局", RunPersistence.isSameRun(SEED, TS + 1));
     }
@@ -57,7 +57,7 @@ public class RunPersistenceTest {
     @Test
     public void isSameRun_nullSeedReturnsFalse() {
         RunPersistence.setCustomDirForTest(tmpDir());
-        RunPersistence.saveCurrentRun(SEED, TS, null, 0);
+        RunPersistence.saveCurrentRun(SEED, TS, null, 0, 0, 0);
         assertFalse(RunPersistence.isSameRun(null, TS));
     }
 
@@ -67,7 +67,7 @@ public class RunPersistenceTest {
         RunPersistence.saveCurrentRun(SEED, TS, Arrays.asList(
                 new ChatMessage(Sender.CARD, "卡的话"),
                 new ChatMessage(Sender.PLAYER, "玩家的话"),
-                new ChatMessage(Sender.CARD, "  ") /* 空消息应被忽略? 由 core 层处理，这里存 */), -2);
+                new ChatMessage(Sender.CARD, "  ") /* 空消息应被忽略? 由 core 层处理，这里存 */), -2, 0, 0);
         List<PersistedMessage> msgs = RunPersistence.loadMessages();
         assertEquals("应存下 3 条", 3, msgs.size());
         assertEquals(Sender.CARD, msgs.get(0).sender);
@@ -79,7 +79,7 @@ public class RunPersistenceTest {
     @Test
     public void loadFavor_roundTrip() {
         RunPersistence.setCustomDirForTest(tmpDir());
-        RunPersistence.saveCurrentRun(SEED, TS, null, -5);
+        RunPersistence.saveCurrentRun(SEED, TS, null, -5, 0, 0);
         assertEquals(-5, RunPersistence.loadFavor());
     }
 
@@ -93,8 +93,8 @@ public class RunPersistenceTest {
     @Test
     public void saveNullSeed_doesNotOverwrite() {
         RunPersistence.setCustomDirForTest(tmpDir());
-        RunPersistence.saveCurrentRun(SEED, TS, null, 7);
-        RunPersistence.saveCurrentRun(null, TS, null, -9); // null seed 不应覆盖
+        RunPersistence.saveCurrentRun(SEED, TS, null, 7, 0, 0);
+        RunPersistence.saveCurrentRun(null, TS, null, -9, 0, 0); // null seed 不应覆盖
         assertTrue("null seed 不应破坏已有指纹", RunPersistence.isSameRun(SEED, TS));
         assertEquals("null seed 不应覆盖 favor", 7, RunPersistence.loadFavor());
     }
@@ -102,9 +102,29 @@ public class RunPersistenceTest {
     @Test
     public void clear_wipesState() {
         RunPersistence.setCustomDirForTest(tmpDir());
-        RunPersistence.saveCurrentRun(SEED, TS, null, 2);
+        RunPersistence.saveCurrentRun(SEED, TS, null, 2, 0, 0);
         assertTrue(RunPersistence.isSameRun(SEED, TS));
         RunPersistence.clear();
         assertFalse("clear 后应视为新局", RunPersistence.isSameRun(SEED, TS));
+    }
+
+    @Test
+    public void probeStats_roundTrip() {
+        String dir = tmpDir();
+        RunPersistence.setCustomDirForTest(dir);
+        RunPersistence.saveCurrentRun(SEED, TS, null, 0, 7, 3);
+        assertEquals("聊天框打开次数应可恢复", 7, RunPersistence.loadChatboxOpens());
+        assertEquals("玩家消息数应可恢复", 3, RunPersistence.loadChatboxPlayerMessages());
+    }
+
+    @Test
+    public void probeStats_oldFileWithoutFieldsReturnsZero() throws Exception {
+        String dir = tmpDir();
+        RunPersistence.setCustomDirForTest(dir);
+        java.io.File f = new java.io.File(dir, RunPersistence.FILE_NAME);
+        java.nio.file.Files.write(f.toPath(),
+                "{\"seed\":1,\"seedSourceTimestamp\":2,\"favor\":3}".getBytes("UTF-8"));
+        assertEquals("旧文件无探针字段应返回0", 0, RunPersistence.loadChatboxOpens());
+        assertEquals("旧文件无探针字段应返回0", 0, RunPersistence.loadChatboxPlayerMessages());
     }
 }

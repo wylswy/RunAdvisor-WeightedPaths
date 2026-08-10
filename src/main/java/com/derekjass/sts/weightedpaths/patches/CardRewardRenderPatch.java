@@ -55,6 +55,16 @@ public class CardRewardRenderPatch {
     private static String playerPickedId = "";
     /** 卡 ID → 中文名（供台词显示中文卡名）。 */
     private static final java.util.Map<String, String> cardNameMap = new java.util.HashMap<>();
+
+    /** 卡 ID → 中文名（供长期陪伴台词显示中文卡名）。未映射时回退原 ID。 */
+    public static String chineseNameOf(String cardId) {
+        if (cardId == null || cardId.isEmpty()) {
+            return "";
+        }
+        String n = cardNameMap.get(cardId);
+        return (n == null || n.isEmpty()) ? cardId : n;
+    }
+
     /** 当前卡奖的 AI 拍板决策（volatile，异步线程写入；null=未配置/未返回/无效→回落规则）。 */
     private static volatile AiRecommendation aiRec;
     /** 已发起 AI 请求的卡奖 key（避免每帧重复请求）。 */

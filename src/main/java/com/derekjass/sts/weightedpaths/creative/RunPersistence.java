@@ -62,7 +62,8 @@ public final class RunPersistence {
      * 保存当前 run 指纹 + 聊天记录 + 好感度。seed 为 null 时视为无 run（不覆盖已有指纹）。
      */
     public static void saveCurrentRun(Long seed, long seedSourceTimestamp,
-                                      List<ChatBoxCore.ChatMessage> messages, int favor) {
+                                      List<ChatBoxCore.ChatMessage> messages, int favor,
+                                      int chatboxOpens, int chatboxPlayerMessages) {
         if (seed == null) {
             return;
         }
@@ -75,6 +76,9 @@ public final class RunPersistence {
             root.addProperty("seed", seed);
             root.addProperty("seedSourceTimestamp", seedSourceTimestamp);
             root.addProperty("favor", favor);
+            // 探针：聊天框使用统计（回答「玩家用不用聊天框」，SL 恢复后继续累积）
+            root.addProperty("chatboxOpens", Math.max(0, chatboxOpens));
+            root.addProperty("chatboxPlayerMessages", Math.max(0, chatboxPlayerMessages));
             JsonArray arr = new JsonArray();
             if (messages != null) {
                 for (ChatBoxCore.ChatMessage m : messages) {
@@ -148,6 +152,24 @@ public final class RunPersistence {
             return 0;
         }
         return (int) safeLong(root.get("favor"));
+    }
+
+    /** 恢复探针：聊天框打开次数。无可恢复/无字段返回 0。 */
+    public static int loadChatboxOpens() {
+        JsonObject root = readState();
+        if (root == null || !root.has("chatboxOpens")) {
+            return 0;
+        }
+        return (int) safeLong(root.get("chatboxOpens"));
+    }
+
+    /** 恢复探针：玩家发送消息数。无可恢复/无字段返回 0。 */
+    public static int loadChatboxPlayerMessages() {
+        JsonObject root = readState();
+        if (root == null || !root.has("chatboxPlayerMessages")) {
+            return 0;
+        }
+        return (int) safeLong(root.get("chatboxPlayerMessages"));
     }
 
     /** 清空状态文件（新局开始，放弃旧对话）。 */

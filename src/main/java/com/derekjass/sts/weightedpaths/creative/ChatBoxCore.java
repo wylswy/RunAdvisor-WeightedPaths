@@ -35,10 +35,34 @@ public final class ChatBoxCore {
     private String gameContext = "";
     /** 对话变化时回调（用于落盘持久化，供 SL 恢复）；可注入，默认无。 */
     private Runnable onChange;
+    /** 探针：聊天框累计打开次数（跨 SL 累积，回答「玩家到底用不用聊天框」）。 */
+    private int openCount = 0;
+    /** 探针：玩家累计发送消息数。 */
+    private int playerMessageCount = 0;
 
     /** 设置对话变化回调（如落盘保存）。 */
     public void setOnChange(Runnable onChange) {
         this.onChange = onChange;
+    }
+
+    /** 探针：聊天框被呼出时调用（UI 层 Tab 打开）。落盘保留，SL 恢复后继续累积。 */
+    public void recordOpen() {
+        openCount++;
+        notifyChange();
+    }
+
+    public int openCount() {
+        return openCount;
+    }
+
+    public int playerMessageCount() {
+        return playerMessageCount;
+    }
+
+    /** SL 重进同一局时恢复探针计数（继续累积，不清零）。 */
+    public void restoreProbeStats(int opens, int playerMessages) {
+        openCount = Math.max(0, opens);
+        playerMessageCount = Math.max(0, playerMessages);
     }
 
     private void notifyChange() {
@@ -102,6 +126,7 @@ public final class ChatBoxCore {
         String trimmed = text.trim();
         messages.add(new ChatMessage(Sender.PLAYER, trimmed));
         trimHistory();
+        playerMessageCount++; // 探针：玩家发消息计数（先于落盘，保证本次计入）
         notifyChange();
         if (CardMoodEngine.isApology(trimmed)) {
             CardMoodEngine.recordApology();
@@ -122,6 +147,10 @@ public final class ChatBoxCore {
         }
         sb.append("你对玩家的好感度：").append(favor)
                 .append("（负数=记仇/闹脾气，正数=友好。请让语气贴合它）\n");
+        String memory = PlayerRelation.get().memoryText();
+        if (!memory.isEmpty()) {
+            sb.append("你们的长久记忆：").append(memory).append("\n");
+        }
         sb.append("你们最近的对话：\n");
         for (ChatMessage m : history) {
             sb.append(m.sender == Sender.CARD ? "卡：" : "玩家：").append(m.text).append("\n");

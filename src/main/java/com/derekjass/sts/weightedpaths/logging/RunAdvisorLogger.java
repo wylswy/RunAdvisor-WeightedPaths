@@ -173,6 +173,25 @@ public final class RunAdvisorLogger {
         flushSummary();
     }
 
+    /**
+     * 取当前局玩家实际抓过的卡 ID（结算长期陪伴记忆用）。
+     * 必须在 {@link #onRunEnd} 清空 current 之前调用。
+     *
+     * @return 玩家抓过的卡 ID 列表（含玩家选择时回填的 playerChosen，跳过没抓的）
+     */
+    public static java.util.List<String> currentPickedCardIds() {
+        if (!isEnabled() || current == null || current.cardRewards == null) {
+            return java.util.Collections.emptyList();
+        }
+        java.util.List<String> picked = new java.util.ArrayList<>();
+        for (RunLogModels.CardRewardLog r : current.cardRewards) {
+            if (r != null && r.playerChosen != null && !r.playerChosen.trim().isEmpty()) {
+                picked.add(r.playerChosen.trim());
+            }
+        }
+        return picked;
+    }
+
     public static RunLogModels.CardChoiceLog choiceLog(
             int index,
             String cardId,

@@ -20,6 +20,7 @@ import com.derekjass.sts.weightedpaths.creative.ChatBoxCore;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.creative.CardMoodEngine;
 import com.derekjass.sts.weightedpaths.creative.RunPersistence;
+import com.derekjass.sts.weightedpaths.creative.PlayerRelation;
 import com.evacipated.cardcrawl.modthespire.lib.SpireInitializer;
 import com.megacrit.cardcrawl.core.Settings;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
@@ -268,12 +269,18 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         if (RunPersistence.isSameRun(seed, ts)) {
             core.clear();
             core.restoreMessages(toCoreMessages(RunPersistence.loadMessages()));
+            // 探针：SL 恢复聊天使用计数，继续累积不清零
+            core.restoreProbeStats(RunPersistence.loadChatboxOpens(),
+                    RunPersistence.loadChatboxPlayerMessages());
             CardMoodEngine.restoreFavor(RunPersistence.loadFavor());
             core.addCardMessage(pickSlTease());
         } else {
             // 全新一局：清空旧对话 + 重置好感度，落盘新指纹
             core.clear();
             CardMoodEngine.reset();
+            // 长期陪伴：卡跨局认出你，按关系阶段开场（绝不进入推荐逻辑）
+            PlayerRelation relation = PlayerRelation.get();
+            core.addCardMessage(relation.greeting());
             saveCurrentRunState();
         }
     }
@@ -283,8 +290,10 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         if (seed == null) {
             return;
         }
+        ChatBoxCore core = ChatBoxUi.get().core();
         RunPersistence.saveCurrentRun(seed, Settings.seedSourceTimestamp,
-                ChatBoxUi.get().core().messages(), CardMoodEngine.favor());
+                core.messages(), CardMoodEngine.favor(),
+                core.openCount(), core.playerMessageCount());
     }
 
     private static List<ChatBoxCore.ChatMessage> toCoreMessages(

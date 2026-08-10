@@ -100,4 +100,30 @@ public class ChatBoxCoreTest {
         core.addCardMessage("  "); // 空白不触发
         assertEquals(2, count[0]);
     }
+
+    @Test
+    public void recordOpenAndPlayerMessagesCount() {
+        ChatBoxCore core = new ChatBoxCore();
+        assertEquals(0, core.openCount());
+        assertEquals(0, core.playerMessageCount());
+        core.recordOpen();
+        core.recordOpen();
+        assertEquals(2, core.openCount());
+        core.onPlayerSend("你好");
+        core.onPlayerSend("   "); // 空白不计
+        core.onPlayerSend(null);
+        assertEquals("空白/空消息不应计数", 1, core.playerMessageCount());
+    }
+
+    @Test
+    public void restoreProbeStats_continuesAccumulation() {
+        ChatBoxCore core = new ChatBoxCore();
+        core.recordOpen();
+        core.onPlayerSend("一句");
+        core.restoreProbeStats(core.openCount(), core.playerMessageCount()); // 模拟 SL 恢复
+        core.recordOpen();
+        core.onPlayerSend("第二句");
+        assertEquals("SL 恢复后打开次数继续累积", 2, core.openCount());
+        assertEquals("SL 恢复后消息数继续累积", 2, core.playerMessageCount());
+    }
 }
