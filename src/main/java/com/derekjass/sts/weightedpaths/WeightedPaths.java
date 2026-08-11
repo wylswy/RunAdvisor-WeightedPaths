@@ -257,7 +257,7 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         ChatInputProcessor.install();
         // 对话每次变化即落盘，SL 重进可恢复（Save/Load 保持卡的记忆）
         ChatBoxUi.get().core().setOnChange(WeightedPaths::saveCurrentRunState);
-        logger.info("Run Advisor 1.5.0 更新：AI 拍板推荐 + 卡会记得你/会记仇/会陪你聊天（温柔陪伴型）。");
+        logger.info("Run Advisor 1.5.0 更新：AI 先查证再拍板推荐 + 卡会记得你/会记仇/会陪你聊天/会跟你打赌（温柔陪伴型）。");
     }
 
     /** 新局/读档开始：分辨是 SL 重进同一局还是全新一局。 */
