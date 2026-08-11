@@ -17,6 +17,15 @@ public final class ChatBoxCore {
 
     public enum Sender { CARD, PLAYER }
 
+    /**
+     * 把一段要在「游戏主线程」执行的代码投递过去（线程调度抽象）。
+     * 默认实现直接在当前线程执行（纯逻辑测试友好）；UI 装配层注入 {@code Gdx.app::postRunnable}，
+     * 让 AI 后台线程的结果安全回到游戏主线程再改共享状态（避免后台线程写 + 渲染线程读同一个 List）。
+     */
+    public interface ThreadDispatcher {
+        void post(Runnable action);
+    }
+
     public static final class ChatMessage {
         public final Sender sender;
         public final String text;
@@ -35,6 +44,8 @@ public final class ChatBoxCore {
     private String gameContext = "";
     /** 对话变化时回调（用于落盘持久化，供 SL 恢复）；可注入，默认无。 */
     private Runnable onChange;
+    /** 线程调度器：把要在主线程执行的动作投递过去；默认直接在当前线程执行（测试友好）。 */
+    private ThreadDispatcher dispatcher = Runnable::run;
     /** 探针：聊天框累计打开次数（跨 SL 累积，回答「玩家到底用不用聊天框」）。 */
     private int openCount = 0;
     /** 探针：玩家累计发送消息数。 */
@@ -43,6 +54,11 @@ public final class ChatBoxCore {
     /** 设置对话变化回调（如落盘保存）。 */
     public void setOnChange(Runnable onChange) {
         this.onChange = onChange;
+    }
+
+    /** 设置线程调度器（UI 层注入 Gdx.app::postRunnable，让 AI 结果回主线程）。默认直跑。 */
+    public void setDispatcher(ThreadDispatcher dispatcher) {
+        this.dispatcher = dispatcher == null ? Runnable::run : dispatcher;
     }
 
     /** 探针：聊天框被呼出时调用（UI 层 Tab 打开）。落盘保留，SL 恢复后继续累积。 */
@@ -190,7 +206,8 @@ public final class ChatBoxCore {
             try {
                 String reply = aiChat.reply(prompt);
                 if (reply != null && !reply.trim().isEmpty()) {
-                    addCardMessage(reply.trim());
+                    // 回投主线程再改共享列表，避免后台线程写 + 渲染线程读同一份 ArrayList 的竞态
+                    dispatcher.post(() -> addCardMessage(reply.trim()));
                 }
             } catch (Exception ignored) {
                 // AI 失败：静默（卡暂时不说话）

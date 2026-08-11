@@ -52,3 +52,4 @@ scripts/启动Claude-DeepSeek.bat
 scripts/启动Codex-DeepSeek.bat
 scripts/启动Hermes-DeepSeek.bat
 scripts/配置Codex-DeepSeek.bat
+run_tmp_test.bat

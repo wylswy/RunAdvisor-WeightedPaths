@@ -3,6 +3,7 @@ package com.derekjass.sts.weightedpaths.creative;
 import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertTrue;
@@ -65,6 +66,20 @@ public class DeepSeekClientTest {
         assertNull(DeepSeekClient.generateLine(null, "prompt"));
         assertNull(DeepSeekClient.generateLine("  ", "prompt"));
         assertNull(DeepSeekClient.generateLine("key", null));
+    }
+
+    @Test
+    public void generateLineResult_nullKeyReportsNotConfigured() {
+        DeepSeekClient.AiResult r = DeepSeekClient.generateLineResult(null, "prompt");
+        assertFalse("未配置 key 应报告 NOT_CONFIGURED", r.isSuccess());
+        assertEquals(DeepSeekClient.Status.NOT_CONFIGURED, r.status);
+        assertEquals("", r.text);
+    }
+
+    @Test
+    public void generateLineResult_emptyPromptReportsNotConfigured() {
+        DeepSeekClient.AiResult r = DeepSeekClient.generateLineResult("key", "");
+        assertEquals(DeepSeekClient.Status.NOT_CONFIGURED, r.status);
     }
 
     @Test

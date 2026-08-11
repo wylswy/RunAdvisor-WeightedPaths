@@ -4,7 +4,7 @@ package com.derekjass.sts.weightedpaths.creative;
  * 「AI 拍板推荐」的生成器接口：给定完整提示词，返回 AI 决定推荐哪张卡的原始输出；失败返回 null。
  * 独立成接口以便测试注入 mock。
  *
- * <p>返回的是「AI 的原始回复文本」，由 {@link AiRecommendationEngine#parse} 负责解析成结构化决策。
+ * <p>返回的是「AI 的原始回复文本」，由 {@link AgentCore#parse} 负责解析成结构化决策。
  */
 public interface AiRecommender {
 

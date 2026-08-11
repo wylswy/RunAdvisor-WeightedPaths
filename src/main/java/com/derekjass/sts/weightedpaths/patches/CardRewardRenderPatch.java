@@ -8,9 +8,10 @@ import com.derekjass.sts.weightedpaths.card.DeckAnalyzer;
 import com.derekjass.sts.weightedpaths.card.DeckSnapshot;
 import com.derekjass.sts.weightedpaths.card.GlobalRunPlan;
 import com.derekjass.sts.weightedpaths.card.PortProfile;
-import com.derekjass.sts.weightedpaths.card.SituationalContext;
 import com.derekjass.sts.weightedpaths.creative.AiRecommendationEngine;
 import com.derekjass.sts.weightedpaths.creative.AiRecommendationEngine.AiRecommendation;
+import com.derekjass.sts.weightedpaths.creative.AgentBridge;
+import com.derekjass.sts.weightedpaths.creative.AgentCore;
 import com.derekjass.sts.weightedpaths.creative.AiRecommender;
 import com.derekjass.sts.weightedpaths.creative.CardAttitudeEngine;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
@@ -71,9 +72,19 @@ public class CardRewardRenderPatch {
     private static volatile String aiRequestedKey = "";
     /** 本次卡奖是否为「记仇使坏」（AI 故意推坏卡逗玩家）。 */
     private static volatile boolean lastWasMischief = false;
+    /** 是否已给 CardAttitudeEngine 注入主线程调度器（只注入一次，避免重复）。 */
+    private static boolean attitudeDispatcherInjected = false;
 
     public static void resetRewardLogCache() {
         lastRewardLogKey = "";
+    }
+
+    /** 给 CardAttitudeEngine 注入主线程调度器（只注入一次）：AI 结果回主线程再改共享台词状态，避免竞态。 */
+    private static void ensureAttitudeDispatcherInjected() {
+        if (!attitudeDispatcherInjected) {
+            CardAttitudeEngine.setDispatcher(com.badlogic.gdx.Gdx.app::postRunnable);
+            attitudeDispatcherInjected = true;
+        }
     }
 
     private CardRewardRenderPatch() {
@@ -228,18 +239,57 @@ public class CardRewardRenderPatch {
 
         final int favor = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor();
         final String mood = com.derekjass.sts.weightedpaths.creative.CardMoodEngine.currentMood().name();
-        final String prompt = AiRecommendationEngine.buildPrompt(candidates, deckContext, favor, mood);
+        // AgentCore：把当前状态编码成结构化 State，供 AI 通过工具协议决策
+        final AgentCore.State state = AgentBridge.buildState(
+                currentAct(), currentHpPercent(), deckContext, favor,
+                AiRecommendationEngine.cardIds(candidates));
+        // 卡奖场景允许 AI 用这些工具（可表达抓某张 / 整次跳过 / 弹提醒）
+        final java.util.Set<AgentCore.Tool> allowed = new java.util.HashSet<>();
+        allowed.add(AgentCore.Tool.ADJUST_RECOMMENDATION);
+        allowed.add(AgentCore.Tool.SKIP_ALL);
+        allowed.add(AgentCore.Tool.SET_WARNING);
+        allowed.add(AgentCore.Tool.DO_NOTHING);
+        final java.util.Set<String> validCardIds = AgentBridge.toIdSet(AiRecommendationEngine.cardIds(candidates));
+        // 闭环收口：调 AI→解析→失败兜底→落盘 全部由 AgentCore.run() 承担（不在此重复实现）
         new Thread(() -> {
             try {
-                String raw = recommender.recommendLine(prompt);
-                AiRecommendation rec = AiRecommendationEngine.parse(raw, ids);
-                if (rec.valid) {
-                    aiRec = rec; // 有效决策：渲染层下一帧覆盖推荐
+                AgentCore.Decision decision = AgentCore.run(state, recommender, allowed, validCardIds);
+                if (decision.valid) {
+                    AiRecommendation rec = AgentBridge.toRecommendation(decision);
+                    if (rec.valid) {
+                        aiRec = rec; // 有效决策：渲染层下一帧覆盖推荐
+                    }
                 }
             } catch (Exception ignored) {
-                // 失败/超时：保持 null，渲染继续走规则兜底
+                // 失败/超时：保持 null，渲染继续走规则兜底（不阻断游戏）
             }
         }).start();
+    }
+
+    /** 当前层数（第几幕）。 */
+    private static int currentAct() {
+        try {
+            return AbstractDungeon.actNum;
+        } catch (Exception ignored) {
+            return 1;
+        }
+    }
+
+    /** 当前血量百分比（0~100）。 */
+    private static int currentHpPercent() {
+        try {
+            if (AbstractDungeon.player == null) {
+                return 100;
+            }
+            int max = AbstractDungeon.player.maxHealth;
+            int cur = AbstractDungeon.player.currentHealth;
+            if (max <= 0) {
+                return 100;
+            }
+            return (int) (cur * 100L / max);
+        } catch (Exception ignored) {
+            return 100;
+        }
     }
 
     private static String currentRewardKey(CardRewardScreen screen) {
@@ -268,32 +318,25 @@ public class CardRewardRenderPatch {
         return new DeepSeekAiRecommender(key.trim());
     }
 
-    /** 构造牌组/情境摘要，供 AI 决策参考。 */
+    /** 构造牌组摘要，供 AI 决策参考（不含层数/血量——它们已由 AgentCore.State 结构化表达，避免重复）。 */
     private static String buildDeckContext() {
-        if (AbstractDungeon.player == null) {
+        if (AbstractDungeon.player == null || AbstractDungeon.player.masterDeck == null) {
             return "";
         }
         StringBuilder sb = new StringBuilder();
-        SituationalContext ctx = SituationalContext.fromCurrentRun();
-        sb.append("第").append(ctx.actNumber).append("层，楼层").append(ctx.floor);
-        if (ctx.maxHp > 0) {
-            sb.append("，血量").append(ctx.currentHp).append("/").append(ctx.maxHp);
+        DeckSnapshot snap = DeckAnalyzer.analyzeSnapshot(AbstractDungeon.player.masterDeck.group);
+        PortProfile ports = snap.ports;
+        sb.append("牌组").append(ports.deckSize).append("张");
+        sb.append("（伤害").append(ports.damagePoints)
+                .append("/格挡").append(ports.blockPoints)
+                .append("/运转").append(ports.enginePoints);
+        if (ports.hasAoe) {
+            sb.append("/有AOE");
         }
-        if (AbstractDungeon.player.masterDeck != null) {
-            DeckSnapshot snap = DeckAnalyzer.analyzeSnapshot(AbstractDungeon.player.masterDeck.group);
-            PortProfile ports = snap.ports;
-            sb.append("，牌组").append(ports.deckSize).append("张");
-            sb.append("（伤害").append(ports.damagePoints)
-                    .append("/格挡").append(ports.blockPoints)
-                    .append("/运转").append(ports.enginePoints);
-            if (ports.hasAoe) {
-                sb.append("/有AOE");
-            }
-            if (ports.hasScaling) {
-                sb.append("/有成长");
-            }
-            sb.append("）");
+        if (ports.hasScaling) {
+            sb.append("/有成长");
         }
+        sb.append("）");
         return sb.toString();
     }
 
@@ -498,6 +541,7 @@ public class CardRewardRenderPatch {
                 ChatBoxUi.get().core().addCardMessage(attitude);
             }
             // AI 增强：传入当前层数情境，避免台词说错层的 Boss/设定
+            ensureAttitudeDispatcherInjected();
             CardAttitudeEngine.enrichWithAi(recommendedName, recommendedSkipAll, chosenName, skipped, chosenGrade, context);
             // 卡奖结束：清空 AI 决策，避免残留到下一张卡奖
             aiRec = null;

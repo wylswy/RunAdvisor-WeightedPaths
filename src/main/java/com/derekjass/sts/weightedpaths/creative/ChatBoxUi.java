@@ -52,6 +52,8 @@ public final class ChatBoxUi {
     public static ChatBoxUi get() {
         if (instance == null) {
             instance = new ChatBoxUi();
+            // AI 结果回投游戏主线程再改对话，避免后台线程写 + 渲染线程读同一个 List 的竞态
+            instance.core.setDispatcher(Gdx.app::postRunnable);
         }
         return instance;
     }

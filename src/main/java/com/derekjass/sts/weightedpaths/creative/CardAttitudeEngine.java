@@ -21,15 +21,22 @@ package com.derekjass.sts.weightedpaths.creative;
  */
 public final class CardAttitudeEngine {
 
-    /** 待提升到卡奖界面显示的台词（上一次卡奖违背生成）。 */
-    private static String pendingLine = "";
+    /** 待提升到卡奖界面显示的台词（上一次卡奖违背生成）。跨线程读写，需 volatile 保证可见性。 */
+    private static volatile String pendingLine = "";
     /** 当前卡奖界面持续显示的台词。 */
-    private static String displayLine = "";
+    private static volatile String displayLine = "";
     /** AI 增强（可为 null，则纯本地模板）。 */
     private static AttitudeAi ai;
     private static String apiKey = "";
+    /** 线程调度器：把要在主线程执行的动作投递过去；默认直接执行（测试友好）。 */
+    private static ChatBoxCore.ThreadDispatcher dispatcher = Runnable::run;
 
     private CardAttitudeEngine() {
+    }
+
+    /** 设置线程调度器（UI/装配层注入 Gdx.app::postRunnable，让 AI 结果回主线程再改共享状态）。默认直跑。 */
+    public static void setDispatcher(ChatBoxCore.ThreadDispatcher d) {
+        dispatcher = d == null ? Runnable::run : d;
     }
 
     /**
@@ -131,10 +138,13 @@ public final class CardAttitudeEngine {
             try {
                 String line = ai.generateFor(recommendedId, recommendedSkipAll,
                         chosenId, skipped, chosenGrade, deckContext);
-                // 仅当模板尚未被 advance 消费时替换，避免覆盖更新的台词
-                if (line != null && !line.isEmpty() && pendingLine.equals(template)) {
-                    pendingLine = line;
-                }
+                // 回投主线程再检查-替换共享状态（检查放主线程做，避免后台线程读 + 主线程写 pendingLine 的竞态）
+                dispatcher.post(() -> {
+                    // 仅当模板尚未被 advance 消费时替换，避免覆盖更新的台词
+                    if (line != null && !line.isEmpty() && pendingLine.equals(template)) {
+                        pendingLine = line;
+                    }
+                });
             } catch (Exception ignored) {
                 // 网络/解析异常：保留模板
             }
