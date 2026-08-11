@@ -106,4 +106,15 @@ public class CardMoodEngineTest {
         CardMoodEngine.restoreFavor(-100);  // 夹到 -10
         assertEquals(-10, CardMoodEngine.favor());
     }
+    @Test
+    public void adjustFavorClampsToBounds() {
+        CardMoodEngine.reset();
+        CardMoodEngine.adjustFavor(5);
+        assertEquals(5, CardMoodEngine.favor());
+        CardMoodEngine.adjustFavor(100);
+        assertEquals(10, CardMoodEngine.favor());
+        CardMoodEngine.reset();
+        CardMoodEngine.adjustFavor(-100);
+        assertEquals(-10, CardMoodEngine.favor());
+    }
 }

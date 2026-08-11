@@ -71,6 +71,10 @@ public final class CardMoodEngine {
      * 道歉识别：判断玩家的聊天输入是否包含道歉/服软意图。
      * 命中则返回 true，调用方应 {@link #recordApology()}。
      */
+    /** 按增量调整好感度（契约完成/违背、探针等），夹紧到 -10..10。 */
+    public static void adjustFavor(int delta) {
+        favor = Math.max(FAVOR_MIN, Math.min(FAVOR_MAX, favor + delta));
+    }
     public static boolean isApology(String input) {
         if (input == null) {
             return false;

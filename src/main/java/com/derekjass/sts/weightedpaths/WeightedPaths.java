@@ -17,6 +17,7 @@ import com.derekjass.sts.weightedpaths.ui.path.BestPathRenderer;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
 import com.derekjass.sts.weightedpaths.creative.ChatInputProcessor;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxCore;
+import com.derekjass.sts.weightedpaths.creative.PactManager;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.creative.CardMoodEngine;
 import com.derekjass.sts.weightedpaths.creative.RunPersistence;
@@ -265,6 +266,8 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         Long seed = Settings.seed;
         long ts = Settings.seedSourceTimestamp;
         ChatBoxCore core = ChatBoxUi.get().core();
+        // 契约状态不跨 SL 持久化：新局/读档统一重置，避免跨局残留
+        PactManager.resetForRun();
         // 同一局重进（SL/读档）：恢复对话 + 好感度，卡调侃你偷偷重开
         if (RunPersistence.isSameRun(seed, ts)) {
             core.clear();
@@ -293,6 +296,8 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
             return;
         }
         ChatBoxCore core = ChatBoxUi.get().core();
+        // 契约状态不跨 SL 持久化：新局/读档统一重置，避免跨局残留
+        PactManager.resetForRun();
         RunPersistence.saveCurrentRun(seed, Settings.seedSourceTimestamp,
                 core.messages(), CardMoodEngine.favor(),
                 core.openCount(), core.playerMessageCount());

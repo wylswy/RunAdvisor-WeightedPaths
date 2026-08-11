@@ -167,6 +167,11 @@ public final class ChatBoxCore {
         if (CardMoodEngine.isApology(trimmed)) {
             CardMoodEngine.recordApology();
         }
+        // 契约：聊天框接受/拒绝赌约（未处理时 PactManager 返回空串，不影响正常聊天）
+        String pactReply = PactManager.onChatInput(trimmed);
+        if (!pactReply.isEmpty()) {
+            addCardMessage(pactReply);
+        }
         requestAiReply(trimmed);
     }
 

@@ -17,6 +17,7 @@ import com.derekjass.sts.weightedpaths.creative.CardAttitudeEngine;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.creative.DeepSeekAiRecommender;
 import com.derekjass.sts.weightedpaths.creative.RecommendationPolicy;
+import com.derekjass.sts.weightedpaths.creative.PactManager;
 import com.derekjass.sts.weightedpaths.logging.RunAdvisorLogger;
 import com.derekjass.sts.weightedpaths.logging.RunLogModels;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
@@ -129,7 +130,9 @@ public class CardRewardRenderPatch {
                 }
             }
 
-            boolean skipAll = bestScore < com.derekjass.sts.weightedpaths.card.FourLayerScorer.SKIP_THRESHOLD;
+            double skipThreshold = com.derekjass.sts.weightedpaths.card.FourLayerScorer.SKIP_THRESHOLD
+                    + (PactManager.isConservativeAdviceActive() ? 5.0 : 0.0);
+            boolean skipAll = bestScore < skipThreshold;
             // 三选一里最高分至少显示 B，避免「全 C 无指引」
             if (!skipAll && bestCard != null) {
                 CardRecommendation bestRec = scored.get(bestCard);
@@ -658,6 +661,11 @@ public class CardRewardRenderPatch {
             if (card != null) {
                 playerPickedId = card.cardID;
                 cardNameMap.put(card.cardID, card.name);
+                // 契约：抓攻击牌检测（「本幕不抓攻击牌」契约的违背判定）
+                String pactMsg = PactManager.onCardPicked(card.type == AbstractCard.CardType.ATTACK);
+                if (!pactMsg.isEmpty()) {
+                    ChatBoxUi.get().core().addCardMessage(pactMsg);
+                }
             }
         }
     }
