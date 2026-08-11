@@ -63,6 +63,7 @@ ModTheSpire 主界面点击 **Run Advisor** 徽章（配置保存在 `WeightedPa
 ```powershell
 pip install pandas
 python scripts/analyze_runs.py --csv runs.csv
+python scripts/eval_card_recommendations.py   # 卡奖推荐有效性（遵循 vs 违背、评级分布、信任调整/使坏统计）
 ```
 
 ## 本地构建
