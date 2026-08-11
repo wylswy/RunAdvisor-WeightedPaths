@@ -1,6 +1,6 @@
 # 让 CI 跑起来（约 10 分钟）
 
-CI（GitHub Actions）会在每次 push 时跑 `mvn test`（当前 204 个测试）。测试需要游戏本体 `desktop-1.0.jar`（约 352MB），但该 jar 是商业游戏文件、不能进公开仓库，所以需要你把它放到一个 CI 能下载到的地方。
+CI（GitHub Actions）会在每次 push 时跑 `mvn test`（测试数量以实际结果为准，不要写死在文档里）。测试需要游戏本体 `desktop-1.0.jar`（约 352MB），但该 jar 是商业游戏文件、不能进公开仓库，所以需要你把它放到一个 CI 能下载到的地方。
 
 推荐用 **GitHub 私有仓库 Release 附件**，全程在 GitHub 网页上完成，不依赖任何第三方网盘。
 

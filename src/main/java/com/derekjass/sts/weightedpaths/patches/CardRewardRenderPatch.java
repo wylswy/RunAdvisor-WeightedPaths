@@ -12,6 +12,7 @@ import com.derekjass.sts.weightedpaths.creative.AiRecommendationEngine;
 import com.derekjass.sts.weightedpaths.creative.AiRecommendationEngine.AiRecommendation;
 import com.derekjass.sts.weightedpaths.creative.AgentBridge;
 import com.derekjass.sts.weightedpaths.creative.AgentCore;
+import com.derekjass.sts.weightedpaths.creative.AiExecutor;
 import com.derekjass.sts.weightedpaths.creative.AiRecommender;
 import com.derekjass.sts.weightedpaths.creative.CardAttitudeEngine;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
@@ -275,7 +276,7 @@ public class CardRewardRenderPatch {
         allowed.add(AgentCore.Tool.DO_NOTHING);
         final java.util.Set<String> validCardIds = AgentBridge.toIdSet(AiRecommendationEngine.cardIds(candidates));
         // 闭环收口：调 AI→解析→失败兜底→落盘 全部由 AgentCore.run() 承担（不在此重复实现）
-        new Thread(() -> {
+        AiExecutor.submit(() -> {
             try {
                 AgentCore.ToolExecutor executor = createToolExecutor(screen, detailed);
                 AgentCore.Decision decision = AgentCore.run(state, recommender, allowed, validCardIds, executor);
@@ -288,7 +289,7 @@ public class CardRewardRenderPatch {
             } catch (Exception ignored) {
                 // 失败/超时：保持 null，渲染继续走规则兜底（不阻断游戏）
             }
-        }).start();
+        });
     }
 
     /** 当前层数（第几幕）。 */

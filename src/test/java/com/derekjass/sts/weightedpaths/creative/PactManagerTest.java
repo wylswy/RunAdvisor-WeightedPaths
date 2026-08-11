@@ -128,4 +128,67 @@ public class PactManagerTest {
         assertNull(PactManager.engine().current());
         assertFalse(PactManager.isConservativeAdviceActive());
     }
+
+    @Test
+    public void exportRestore_roundTripKeepsPact() {
+        PactManager.onMapOpen(1, true, true);
+        PactManager.engine().accept();
+        com.google.gson.JsonObject state = PactManager.exportState();
+        PactManager.resetForRun();
+        PactManager.restoreState(state);
+        assertEquals(PactEngine.Status.ACCEPTED, PactManager.engine().current().status);
+        assertEquals(1, PactManager.engine().current().acceptedAct);
+        assertFalse(PactManager.isConservativeAdviceActive());
+    }
+
+    @Test
+    public void restoreState_restoresConservativeFlag() {
+        PactManager.onMapOpen(1, true, false); // 无种子 → CONSERVATIVE_ADVICE
+        PactManager.engine().accept();
+        PactManager.onActEnd(); // NO_ATTACK 完成，奖励置保守建议标志
+        com.google.gson.JsonObject state = PactManager.exportState();
+        PactManager.resetForRun();
+        PactManager.restoreState(state);
+        assertTrue(PactManager.isConservativeAdviceActive());
+        assertEquals(PactEngine.Status.COMPLETED, PactManager.engine().current().status);
+    }
+
+    @Test
+    public void restoreState_invalidPactClearsPactKeepsFlags() {
+        com.google.gson.JsonObject bad = new com.google.gson.JsonObject();
+        bad.addProperty("lastAct", 1);
+        bad.addProperty("conservative", true);
+        com.google.gson.JsonObject pact = new com.google.gson.JsonObject();
+        pact.addProperty("condition", "BOGUS");
+        bad.add("pact", pact);
+        PactManager.restoreState(bad);
+        assertNull(PactManager.engine().current());
+        assertTrue(PactManager.isConservativeAdviceActive());
+        assertEquals(1, PactManager.exportState().get("lastAct").getAsInt());
+    }
+
+    @Test
+    public void restoreState_invalidTopLevelResets() {
+        com.google.gson.JsonObject bad = new com.google.gson.JsonObject();
+        bad.addProperty("lastAct", "not-an-int");
+        PactManager.restoreState(bad);
+        assertNull(PactManager.engine().current());
+        assertFalse(PactManager.isConservativeAdviceActive());
+    }
+
+    @Test
+    public void restoreState_nullResets() {
+        PactManager.onMapOpen(1, true, true);
+        PactManager.restoreState(null);
+        assertNull(PactManager.engine().current());
+        assertFalse(PactManager.isConservativeAdviceActive());
+    }
+
+    @Test
+    public void chatDeclineWithNegationDeclinesInsteadOfAccepting() {
+        PactManager.onMapOpen(1, true, true);
+        String reply = PactManager.onChatInput("不同意");
+        assertFalse(reply.isEmpty());
+        assertNull(PactManager.engine().current());
+    }
 }

@@ -143,4 +143,63 @@ public class PactEngineTest {
         engine.onCardPicked(true);
         assertNull(engine.pendingReward());
     }
+
+    @Test
+    public void exportState_noActivePactReturnsNull() {
+        PactEngine engine = new PactEngine();
+        assertNull(engine.exportState());
+    }
+
+    @Test
+    public void exportRestore_roundTripPreservesAcceptedPact() {
+        PactEngine engine = new PactEngine();
+        engine.propose(1, true, true);
+        engine.accept();
+        com.google.gson.JsonObject o = engine.exportState();
+        PactEngine restored = new PactEngine();
+        restored.restoreState(o);
+        assertEquals(PactEngine.Condition.NO_ATTACK_CARDS_THIS_ACT, restored.current().condition);
+        assertEquals(PactEngine.Reward.REVEAL_NEXT_ELITE, restored.current().reward);
+        assertEquals(1, restored.current().acceptedAct);
+        assertEquals(PactEngine.Status.ACCEPTED, restored.current().status);
+        assertTrue(restored.hasActive());
+    }
+
+    @Test
+    public void exportRestore_completedKeepsPendingReward() {
+        PactEngine engine = new PactEngine();
+        engine.propose(1, true, true);
+        engine.accept();
+        engine.onActEnd();
+        PactEngine restored = new PactEngine();
+        restored.restoreState(engine.exportState());
+        assertEquals(PactEngine.Status.COMPLETED, restored.current().status);
+        assertEquals(PactEngine.Reward.REVEAL_NEXT_ELITE, restored.pendingReward());
+        assertEquals(PactEngine.Reward.REVEAL_NEXT_ELITE, restored.consumeReward());
+        assertNull(restored.consumeReward());
+    }
+
+    @Test
+    public void restoreState_invalidDataClearsState() {
+        PactEngine engine = new PactEngine();
+        engine.propose(1, true, true);
+        com.google.gson.JsonObject bad = new com.google.gson.JsonObject();
+        bad.addProperty("condition", "NOT_A_CONDITION");
+        bad.addProperty("reward", "REVEAL_NEXT_ELITE");
+        bad.addProperty("act", 1);
+        bad.addProperty("status", "ACCEPTED");
+        engine.restoreState(bad);
+        assertFalse(engine.hasActive());
+        assertNull(engine.current());
+        assertNull(engine.pendingReward());
+    }
+
+    @Test
+    public void restoreState_nullKeepsCurrentState() {
+        PactEngine engine = new PactEngine();
+        engine.propose(1, true, true);
+        engine.restoreState(null);
+        assertTrue(engine.hasActive());
+        assertEquals(PactEngine.Status.OFFERED, engine.current().status);
+    }
 }

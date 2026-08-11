@@ -1,5 +1,7 @@
 package com.derekjass.sts.weightedpaths.creative;
 
+import com.google.gson.JsonObject;
+
 /**
  * 契约/赌约引擎 —— 让「卡」提出有后果的新决策（原版不存在的选择空间）。
  *
@@ -155,6 +157,42 @@ public final class PactEngine {
         }
         active.status = Status.VIOLATED;
         return FAVOR_VIOLATE;
+    }
+
+    /** 导出当前契约状态（供跨 SL 持久化）；无活动契约返回 null。 */
+    public JsonObject exportState() {
+        if (active == null) {
+            return null;
+        }
+        JsonObject o = new JsonObject();
+        o.addProperty("condition", active.condition.name());
+        o.addProperty("reward", active.reward.name());
+        o.addProperty("act", active.acceptedAct);
+        o.addProperty("status", active.status.name());
+        if (pendingReward != null) {
+            o.addProperty("pendingReward", pendingReward.name());
+        }
+        return o;
+    }
+
+    /** 从持久化状态恢复契约；数据非法时静默清空（不崩游戏）。 */
+    public void restoreState(JsonObject o) {
+        if (o == null) {
+            return;
+        }
+        try {
+            Condition c = Condition.valueOf(o.get("condition").getAsString());
+            Reward r = Reward.valueOf(o.get("reward").getAsString());
+            int act = o.get("act").getAsInt();
+            Status s = Status.valueOf(o.get("status").getAsString());
+            active = new Pact(c, r, act, s);
+            if (o.has("pendingReward")) {
+                pendingReward = Reward.valueOf(o.get("pendingReward").getAsString());
+            }
+        } catch (Exception ignored) {
+            active = null;
+            pendingReward = null;
+        }
     }
 
     private void complete() {

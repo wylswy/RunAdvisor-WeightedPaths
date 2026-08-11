@@ -266,8 +266,6 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         Long seed = Settings.seed;
         long ts = Settings.seedSourceTimestamp;
         ChatBoxCore core = ChatBoxUi.get().core();
-        // 契约状态不跨 SL 持久化：新局/读档统一重置，避免跨局残留
-        PactManager.resetForRun();
         // 同一局重进（SL/读档）：恢复对话 + 好感度，卡调侃你偷偷重开
         if (RunPersistence.isSameRun(seed, ts)) {
             core.clear();
@@ -276,11 +274,13 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
             core.restoreProbeStats(RunPersistence.loadChatboxOpens(),
                     RunPersistence.loadChatboxPlayerMessages());
             CardMoodEngine.restoreFavor(RunPersistence.loadFavor());
+            PactManager.restoreState(RunPersistence.loadPactState());
             core.addCardMessage(pickSlTease());
         } else {
             // 全新一局：清空旧对话 + 重置好感度，落盘新指纹
             core.clear();
             CardMoodEngine.reset();
+            PactManager.resetForRun();
             // 卡奖去重缓存必须新局重置：日志关闭时它也会累积，否则跨局同楼层同卡组会串 key
             com.derekjass.sts.weightedpaths.patches.CardRewardRenderPatch.resetRewardLogCache();
             // 长期陪伴：卡跨局认出你，按关系阶段开场（绝不进入推荐逻辑）
@@ -296,11 +296,10 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
             return;
         }
         ChatBoxCore core = ChatBoxUi.get().core();
-        // 契约状态不跨 SL 持久化：新局/读档统一重置，避免跨局残留
-        PactManager.resetForRun();
         RunPersistence.saveCurrentRun(seed, Settings.seedSourceTimestamp,
                 core.messages(), CardMoodEngine.favor(),
-                core.openCount(), core.playerMessageCount());
+                core.openCount(), core.playerMessageCount(),
+                PactManager.exportState());
     }
 
     private static List<ChatBoxCore.ChatMessage> toCoreMessages(

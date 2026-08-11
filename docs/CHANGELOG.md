@@ -9,6 +9,17 @@
 
 | 提交 | 变更 | 原因 |
 |------|------|------|
+| （本次收尾 · 2026-08-11） | 收尾接线闭环：修 3 处残留（PactManager 重复声明/游离行语法错误、CardRewardRenderPatch 缺 AiExecutor import、RunPersistenceTest 旧签名）；契约状态跨 SL 持久化（PactEngine/PactManager 导出-恢复 + run_state.json 落 pact 字段 + 新局重置/SL 恢复）；RunLifecyclePatch 胜负结算契约；AiExecutor 共享单线程 daemon 池替换 3 处 `new Thread`；agent_log.json 超 5MB 轮转保留一份历史；ModTheSpire.json 版本改由 pom 过滤注入（单一事实源）；CI-SETUP 文档测试数不写死；补 13 个测试（导出/恢复往返、非法数据降级、否定式拒绝、旧文件兼容） | 8.11 最终交付前收尾：编译/测试全绿，契约与 agent 功能完整；246 测试全过 |
+| e4a7f1e | 契约/赌约接线完成：PactManager 接线层（提案消息/聊天接受拒绝/好感度应用/奖励发放+保守建议标志），挂 4 个游戏钩子——地图打开幕切换结算+新幕提案、进精英房结算 REACH_ELITE、抓攻击牌违背检测、聊天框接受/拒绝关键词；CardMoodEngine 新增 adjustFavor（夹紧 -10..10）；奖励真实生效：REVEAL_NEXT_ELITE 报精英距离+前方路线、CONSERVATIVE_ADVICE 提高卡奖跳过阈值 5 分 | 契约从纯引擎接入真实游戏流程；233 测试全过 |
+| ebd6165 | 机制层第二块：契约/赌约引擎 PactEngine——状态机 OFFERED→ACCEPTED→COMPLETED/VIOLATED；两类条件（不抓攻击牌/50% 血到精英）与两类奖励（揭精英/保守建议）；事件驱动（抓牌/到精英/幕结束），完成 +2 好感/违背 -2，奖励只发一次；纯逻辑确定性，与 CardMoodEngine 联动由调用方执行 | 卡提出有后果的新决策（原版不存在的选择空间）；219 测试全过 |
+| 70ba414 | CI 配置辅助：工作流支持两种取游戏 jar 方式（GitHub 私有 Release 附件 GH_ASSETS_TOKEN+ASSETS_REPO / 任意私有直链 STS_GAME_JAR_URL），未配置跳过测试不红；新增 docs/CI-SETUP.md 图文配置指南，README 挂入口 | 让 CI 在私有游戏 jar 前提下可复现 |
+| 70f658d | agent 工具循环（ReAct 式）：AgentCore 升级为真 agent——AI 可先调只读查询工具（EVALUATE_CARD/QUERY_DECK/QUERY_ROUTE）查证再给最终动作，最多 3 轮有界循环；工具执行器由 patches 层注入真实引擎；无 key/AI 失败/输出无效/超轮数/执行器异常→规则兜底；agent_log.json 新增 tools 字段 | 推荐先查证再决策，闭环更可靠；204 测试全过 |
+| 193d2fd | 数据闭环第一块：离线回放评估脚本 eval_card_recommendations.py——统计遵循/违背推荐的行为差异、评级分布、违背分差、信任调整/使坏触发率 + agent_log.json 可观测性；兼容旧日志缺字段；支持 --csv 导出 | 用真实对局数据验证推荐有效性 |
+| 47a3fd4 | 工程收口：ModTheSpire/BaseMod jar 进仓（lib/），游戏本体 jar 由 scripts/setup-libs.ps1 引导获取；pom 依赖改项目内路径；.github/workflows/ci.yml 跑 mvn test（游戏 jar 经 secret 提供，未配置跳过）；.gitattributes 统一行尾；LICENSE 补 MIT；README 补依赖准备步骤 | 依赖可复现 + CI + LICENSE；196 测试全过 |
+| 93c9e3e | 机制层第一块：信任调整策略 RecommendationPolicy——关系真正改变推荐结果（纯函数确定性可回放）：favor≤-6→0.55/≤-2→0.80/友好→1.0；接入卡奖渲染链路（先调整后记录，日志/违背检测/显示三者一致）；run_*.json 新增 trustAdjusted/trustFactor；修推荐记录与显示脱节 bug | 让关系影响推荐而非只影响台词；196 测试全过 |
+| d2a6f69 | agent 闭环 WIP 收口落库：AgentCore 最小 agent 闭环（感知→结构化 JSON 工具协议→参数校验→规则兜底→agent_log.json 全落盘）+ AgentBridge 桥接 UI + 卡奖链路接入 AgentCore.run；线程安全：ThreadDispatcher 抽象 + Gdx.app::postRunnable 回投主线程 + volatile；DeepSeekClient 结构化失败分级 + log4j 告警 | 8.11 核心「AI 拍板推荐」闭环落库；185 测试全过 |
+| 304b4f7 | README 重写：AI 陪伴提为主打 | 让交付文档先讲「卡会记得你」 |
+| 19e67a6 | 长期陪伴跨局记忆（温暖向·真记得不装）：player_relation.json 跨局档案 + 关系阶段（陌生→熟识→默契→好友）+ 卡开场按阶段/真记得上把（楼层/胜负/抓牌中文名/聊过的话）+ 聊天提示词注入记忆 + 诚实护栏（记不清就说绝不编造）；收编 Claude 聊天探针 | 跨局真记忆，陪伴感落地；164 测试全过 |
 | （debug 批 · 2026-08-11） | ①GlobalRunPlanner 修状态共享：每条路线用 `state.copy()` 估值（此前共用实例，后路线继承前路线血量/死亡，各幕预览推荐失真）；②GlobalRunPlan 修前方路线恒空：MapPath 不含当前节点，改为直接全量收集（此前首房后精英压力/剩余火堆/AOE 判断全失效，一层精英误吃"无火堆"×0.30 惩罚）；③推荐状态机与决策日志开关解耦（关日志后态度/记仇/违背检测仍工作）+ 卡奖去重缓存新局重置；④使坏"没上当"好感不动（明着坏下不中计是正常反应，不再自愈也不死循环，解锁记仇靠道歉）；⑤聊天探针计数新局清零（per-run 口径）；⑥日志会话按 seed+timestamp 识别（同 seed 弃局重开不再串数据）；⑦卡奖日志评级用显示口径（B 档提升对齐） | 修 1.5.0 交付后 debug 审查发现的逻辑/集成问题；166 测试全过 |
 | （本次提交） | 版本统一 1.4.9→1.5.0（pom/README/ModTheSpire.json/RunAdvisorLogger/WeightedPaths 五处）；AI 推荐完善（记仇理由缩短防压边、记仇只在无高分卡时触发防坑玩家、使坏标签色）；README/描述更新为「AI 拍板推荐+卡会陪伴」 | 8.11 交付定稿版本；修使坏坑高分卡风险 |
 | 6c67f86 | 记仇使坏改「明着坏」护栏 + README 修正过时描述 | 使坏理由明说「在逗你」不装，保住推荐可信度 |

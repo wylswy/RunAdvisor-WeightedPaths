@@ -61,6 +61,20 @@
     <build>
         <!-- Change this to match your mods name -->
         <finalName>WeightedPaths</finalName>
+        <!-- 版本单一事实源：ModTheSpire.json 的 version 由 pom 的 ${project.version} 过滤注入 -->
+        <resources>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>true</filtering>
+                <includes>
+                    <include>ModTheSpire.json</include>
+                </includes>
+            </resource>
+        </resources>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

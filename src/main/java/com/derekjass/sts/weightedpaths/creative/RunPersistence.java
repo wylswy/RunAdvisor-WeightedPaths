@@ -63,7 +63,8 @@ public final class RunPersistence {
      */
     public static void saveCurrentRun(Long seed, long seedSourceTimestamp,
                                       List<ChatBoxCore.ChatMessage> messages, int favor,
-                                      int chatboxOpens, int chatboxPlayerMessages) {
+                                      int chatboxOpens, int chatboxPlayerMessages,
+                                      com.google.gson.JsonObject pactState) {
         if (seed == null) {
             return;
         }
@@ -92,6 +93,7 @@ public final class RunPersistence {
                 }
             }
             root.add("messages", arr);
+            root.add("pact", pactState == null ? new JsonObject() : pactState);
             try (OutputStreamWriter w = new OutputStreamWriter(
                     new FileOutputStream(stateFile()), StandardCharsets.UTF_8)) {
                 w.write(root.toString());
@@ -170,6 +172,15 @@ public final class RunPersistence {
             return 0;
         }
         return (int) safeLong(root.get("chatboxPlayerMessages"));
+    }
+
+    /** 恢复上次保存的契约状态；无字段返回 null。 */
+    public static JsonObject loadPactState() {
+        JsonObject root = readState();
+        if (root == null || !root.has("pact") || !root.get("pact").isJsonObject()) {
+            return null;
+        }
+        return root.getAsJsonObject("pact");
     }
 
     /** 清空状态文件（新局开始，放弃旧对话）。 */

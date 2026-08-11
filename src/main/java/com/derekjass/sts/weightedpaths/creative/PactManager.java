@@ -1,6 +1,7 @@
 package com.derekjass.sts.weightedpaths.creative;
 
 import com.derekjass.sts.weightedpaths.card.GlobalRunPlan;
+import com.google.gson.JsonObject;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -25,7 +26,7 @@ public final class PactManager {
     private static final Set<String> ACCEPT_WORDS = new HashSet<>(Arrays.asList(
             "同意", "我同意", "接受", "我接受", "答应", "我答应", "成交", "就这么办", "说到做到"));
     private static final Set<String> DECLINE_WORDS = new HashSet<>(Arrays.asList(
-            "拒绝", "我拒绝", "不要", "不干", "算了", "不了", "不答应", "没兴趣", "别闹"));
+            "拒绝", "我拒绝", "不要", "不同意", "不答应", "不想", "不干", "算了", "不了", "没兴趣", "别闹"));
 
     private PactManager() {
     }
@@ -40,7 +41,37 @@ public final class PactManager {
         return conservativeAdviceActive;
     }
 
-    /** 新局/SL 重开：清空契约状态（契约暂不跨 SL 持久化，重开可重新提出）。 */
+    /** 导出契约状态（跨 SL 持久化用）。 */
+    public static JsonObject exportState() {
+        JsonObject o = new JsonObject();
+        o.addProperty("lastAct", lastAct);
+        o.addProperty("conservative", conservativeAdviceActive);
+        JsonObject pact = engine.exportState();
+        if (pact != null) {
+            o.add("pact", pact);
+        }
+        return o;
+    }
+
+    /** 从持久化状态恢复契约（SL 重进同一局）；顶层字段非法则整体重置，pact 子对象非法则仅清空契约（不崩游戏）。 */
+    public static void restoreState(JsonObject o) {
+        if (o == null) {
+            resetForRun();
+            return;
+        }
+        try {
+            lastAct = o.has("lastAct") ? o.get("lastAct").getAsInt() : 0;
+            conservativeAdviceActive = o.has("conservative") && o.get("conservative").getAsBoolean();
+            JsonObject pact = o.has("pact") && o.get("pact").isJsonObject()
+                    ? o.getAsJsonObject("pact") : null;
+            engine = new PactEngine();
+            engine.restoreState(pact);
+        } catch (Exception ignored) {
+            resetForRun();
+        }
+    }
+
+    /** 新局：清空契约状态（跨 SL 由 {@link #restoreState} 恢复）。 */
     public static void resetForRun() {
         engine = new PactEngine();
         lastAct = 0;
@@ -82,16 +113,17 @@ public final class PactManager {
             return "";
         }
         String t = text.trim();
-        for (String w : ACCEPT_WORDS) {
-            if (t.contains(w)) {
-                engine.accept();
-                return "好，说定了。别让我失望。";
-            }
-        }
+        // 先判拒绝（含否定变体如「不同意/不要同意」），再判接受，避免「不+同意」歧义
         for (String w : DECLINE_WORDS) {
             if (t.contains(w)) {
                 engine.decline();
                 return "行，随你。";
+            }
+        }
+        for (String w : ACCEPT_WORDS) {
+            if (t.contains(w)) {
+                engine.accept();
+                return "好，说定了。别让我失望。";
             }
         }
         return "";

@@ -42,6 +42,8 @@ public final class AgentCore {
 
     /** 工具调用循环的最大轮数（有界，防失控）。 */
     public static final int MAX_TOOL_CALLS = 3;
+    /** agent_log.json 超过该字节数后轮转（改名 .1，保留一份历史，防无限膨胀）。 */
+    private static final long LOG_ROTATE_BYTES = 5L * 1024 * 1024;
 
     /** AI 可调用的只读查询工具（非最终动作；结果由调用方注入的 ToolExecutor 执行真实引擎）。 */
     public static final Set<String> QUERY_TOOLS = Collections.unmodifiableSet(
@@ -438,7 +440,15 @@ public final class AgentCore {
                 }
             }
             sb.append("]}\n");
+            // 简单轮转：超过阈值时把旧日志改名为 .1（保留一份历史，防无限膨胀）
             File f = new File(dir, LOG_FILE_NAME);
+            if (f.exists() && f.length() > LOG_ROTATE_BYTES) {
+                File rotated = new File(dir, LOG_FILE_NAME + ".1");
+                if (rotated.exists()) {
+                    rotated.delete();
+                }
+                f.renameTo(rotated);
+            }
             try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(f, true), StandardCharsets.UTF_8))) {
                 w.write(sb.toString());

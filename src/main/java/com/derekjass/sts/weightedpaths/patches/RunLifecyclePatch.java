@@ -3,6 +3,7 @@ package com.derekjass.sts.weightedpaths.patches;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxCore;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.creative.PlayerRelation;
+import com.derekjass.sts.weightedpaths.creative.PactManager;
 import com.derekjass.sts.weightedpaths.logging.RunAdvisorLogger;
 import com.derekjass.sts.weightedpaths.patches.CardRewardRenderPatch;
 import com.evacipated.cardcrawl.modthespire.lib.SpirePatch;
@@ -27,8 +28,19 @@ public class RunLifecyclePatch {
         }
     }
 
+    /** 结算契约（对局结束：胜/负都要结算，避免第三幕契约悬空）。 */
+    private static void settlePact() {
+        try {
+            String msg = PactManager.onActEnd();
+            if (!msg.isEmpty()) {
+                ChatBoxUi.get().core().addCardMessage(msg);
+            }
+        } catch (Exception ignored) {
+            // 结算失败不致命
+        }
+    }
+
     /**
-     * 结算跨局关系（须先于 RunAdvisorLogger.onRunEnd，否则 current 被清空拿不到抓牌）。
      * 抓牌转中文名存入档案；温暖向，只影响表达，不碰推荐。
      */
     private static void settleRelation(boolean victory) {
@@ -58,6 +70,7 @@ public class RunLifecyclePatch {
         @SpirePostfixPatch
         public static void after(DeathScreen __instance, MonsterGroup mg) {
             settleRelation(false);
+            settlePact();
             RunAdvisorLogger.onRunEnd(false, "death");
         }
     }
@@ -71,6 +84,7 @@ public class RunLifecyclePatch {
         @SpirePostfixPatch
         public static void after(VictoryScreen __instance, MonsterGroup mg) {
             settleRelation(true);
+            settlePact();
             RunAdvisorLogger.onRunEnd(true, "victory");
         }
     }

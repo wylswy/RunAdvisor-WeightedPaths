@@ -134,7 +134,7 @@ public final class CardAttitudeEngine {
             return; // 无 key：纯本地模板
         }
         final String template = pendingLine;
-        new Thread(() -> {
+        AiExecutor.submit(() -> {
             try {
                 String line = ai.generateFor(recommendedId, recommendedSkipAll,
                         chosenId, skipped, chosenGrade, deckContext);
@@ -148,7 +148,7 @@ public final class CardAttitudeEngine {
             } catch (Exception ignored) {
                 // 网络/解析异常：保留模板
             }
-        }).start();
+        });
     }
 
     /** 懒加载默认 AI：从环境变量/系统属性读 key；未配置返回 null（纯模板）。 */
