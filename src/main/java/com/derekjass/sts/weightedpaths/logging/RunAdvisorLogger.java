@@ -123,7 +123,9 @@ public final class RunAdvisorLogger {
 
     public static void logCardReward(
             boolean skipAll,
-            List<RunLogModels.CardChoiceLog> choices) {
+            List<RunLogModels.CardChoiceLog> choices,
+            boolean trustAdjusted,
+            double trustFactor) {
         if (!isEnabled() || current == null || AbstractDungeon.player == null) {
             return;
         }
@@ -134,6 +136,8 @@ public final class RunAdvisorLogger {
                 ? (double) AbstractDungeon.player.currentHealth / AbstractDungeon.player.maxHealth
                 : 1.0;
         reward.recommendedSkipAll = skipAll;
+        reward.trustAdjusted = trustAdjusted;
+        reward.trustFactor = trustFactor;
         if (choices != null) {
             reward.choices.addAll(choices);
         }

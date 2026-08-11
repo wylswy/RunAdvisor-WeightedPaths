@@ -45,6 +45,10 @@ public final class RunLogModels {
         public int act;
         public double hpRatio;
         public boolean recommendedSkipAll;
+        /** 本次推荐是否被信任调整（好感度低导致推荐失真；离线分析用）。 */
+        public boolean trustAdjusted = false;
+        /** 本次生效的信任系数（1.0=友好无失真）。 */
+        public double trustFactor = 1.0;
         public List<CardChoiceLog> choices = new ArrayList<>();
         /** 玩家实际抓的卡 cardID；"" 表示跳过或尚未记录。 */
         public String playerChosen = "";

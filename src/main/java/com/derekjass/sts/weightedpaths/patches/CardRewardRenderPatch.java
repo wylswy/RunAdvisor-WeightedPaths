@@ -16,6 +16,7 @@ import com.derekjass.sts.weightedpaths.creative.AiRecommender;
 import com.derekjass.sts.weightedpaths.creative.CardAttitudeEngine;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxUi;
 import com.derekjass.sts.weightedpaths.creative.DeepSeekAiRecommender;
+import com.derekjass.sts.weightedpaths.creative.RecommendationPolicy;
 import com.derekjass.sts.weightedpaths.logging.RunAdvisorLogger;
 import com.derekjass.sts.weightedpaths.logging.RunLogModels;
 import com.derekjass.sts.weightedpaths.card.data.CardStatsLoader;
@@ -138,7 +139,23 @@ public class CardRewardRenderPatch {
                             com.derekjass.sts.weightedpaths.card.CardGrade.B, bestRec.score, bestRec.reason));
                 }
             }
-            maybeLogCardReward(__instance, scored, detailed, bestCard, skipAll);
+            // 信任调整（机制层）：不友好时确定性推荐失真（不依赖 AI/key，总是生效）；AI 有效决策随后覆盖
+            RecommendationPolicy.Decision policy = RecommendationPolicy.decide(
+                    buildPolicyCandidates(__instance, scored),
+                    com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor());
+            if (!skipAll && policy.trustAdjusted && policy.cardId != null) {
+                AbstractCard picked = findById(__instance, policy.cardId);
+                if (picked != null) {
+                    bestCard = picked;
+                    CardRecommendation rec = scored.get(picked);
+                    if (rec != null && rec.reason != null && !rec.reason.contains("闹脾气")) {
+                        scored.put(picked, new CardRecommendation(rec.grade, rec.score, rec.reason + "（它在闹脾气，推荐可能失真）"));
+                    }
+                }
+            }
+
+            maybeLogCardReward(__instance, scored, detailed, bestCard, skipAll,
+                    !skipAll && policy.trustAdjusted, policy.trustFactor);
 
             // AI 拍板推荐：异步请求（每个卡奖一次），返回前渲染走规则兜底
             requestAiDecision(__instance, detailed, skipAll, buildDeckContext());
@@ -154,6 +171,10 @@ public class CardRewardRenderPatch {
                     bestCard = findById(__instance, ai.recommendedId);
                 }
             }
+
+            // 状态机同步：把最终显示的推荐同步给违背检测（AI 异步到达/信任调整后，显示与记录保持一致）
+            lastRecommendedId = bestCard == null ? "" : bestCard.cardID;
+            lastSkipAll = skipAll;
 
             boolean isMischief = lastWasMischief && ai != null && ai.valid && !ai.skipAll;
             for (AbstractCard card : __instance.rewardGroup) {
@@ -292,6 +313,26 @@ public class CardRewardRenderPatch {
         }
     }
 
+    /** 构建候选卡快照（供信任调整策略层决策；纯数据，不触碰游戏状态）。 */
+    private static java.util.List<AiRecommendationEngine.Candidate> buildPolicyCandidates(
+            CardRewardScreen screen,
+            java.util.HashMap<AbstractCard, CardRecommendation> scored) {
+        java.util.ArrayList<AiRecommendationEngine.Candidate> candidates = new java.util.ArrayList<>();
+        if (screen == null || screen.rewardGroup == null) {
+            return candidates;
+        }
+        for (AbstractCard card : screen.rewardGroup) {
+            if (card == null) {
+                continue;
+            }
+            CardRecommendation rec = scored.get(card);
+            String grade = rec == null || rec.grade == null ? "" : rec.grade.name();
+            double score = rec == null ? 0.0 : rec.score;
+            candidates.add(new AiRecommendationEngine.Candidate(card.cardID, card.name, grade, score));
+        }
+        return candidates;
+    }
+
     private static String currentRewardKey(CardRewardScreen screen) {
         if (screen == null || screen.rewardGroup == null) {
             return "";
@@ -345,7 +386,9 @@ public class CardRewardRenderPatch {
             java.util.HashMap<AbstractCard, CardRecommendation> scored,
             java.util.HashMap<AbstractCard, CardScorer.ScoredResult> detailed,
             AbstractCard bestCard,
-            boolean skipAll) {
+            boolean skipAll,
+            boolean trustAdjusted,
+            double trustFactor) {
         RunAdvisorLogger.ensureSession(); // 日志关闭时空操作；开启新局日志时重置卡奖缓存
         StringBuilder keyBuilder = new StringBuilder();
         keyBuilder.append(AbstractDungeon.floorNum).append(':');
@@ -403,7 +446,7 @@ public class CardRewardRenderPatch {
                     result.breakdown));
             index++;
         }
-        RunAdvisorLogger.logCardReward(skipAll, choices);
+        RunAdvisorLogger.logCardReward(skipAll, choices, trustAdjusted, trustFactor);
     }
 
     private static void drawRecommendation(
