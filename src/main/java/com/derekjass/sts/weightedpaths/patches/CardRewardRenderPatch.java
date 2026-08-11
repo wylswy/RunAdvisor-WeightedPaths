@@ -274,7 +274,8 @@ public class CardRewardRenderPatch {
         // 闭环收口：调 AI→解析→失败兜底→落盘 全部由 AgentCore.run() 承担（不在此重复实现）
         new Thread(() -> {
             try {
-                AgentCore.Decision decision = AgentCore.run(state, recommender, allowed, validCardIds);
+                AgentCore.ToolExecutor executor = createToolExecutor(screen, detailed);
+                AgentCore.Decision decision = AgentCore.run(state, recommender, allowed, validCardIds, executor);
                 if (decision.valid) {
                     AiRecommendation rec = AgentBridge.toRecommendation(decision);
                     if (rec.valid) {
@@ -333,6 +334,63 @@ public class CardRewardRenderPatch {
         return candidates;
     }
 
+    /** 只读查询工具执行器：让 AI 通过真实引擎查证（算分器/牌组/路线规划），返回纯文本结果。 */
+    private static AgentCore.ToolExecutor createToolExecutor(
+            CardRewardScreen screen,
+            java.util.HashMap<AbstractCard, CardScorer.ScoredResult> detailed) {
+        return (tool, args) -> {
+            switch (tool) {
+                case "EVALUATE_CARD": {
+                    String cardId = args == null || args.get("cardId") == null ? "" : args.get("cardId");
+                    AbstractCard card = findById(screen, cardId);
+                    CardScorer.ScoredResult r = card == null ? null : detailed.get(card);
+                    if (r == null || r.recommendation == null) {
+                        return "未找到候选卡 " + cardId + " 的评分";
+                    }
+                    CardRecommendation rec = r.recommendation;
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("评分=").append(String.format("%.1f", rec.score));
+                    sb.append(", 评级=").append(rec.grade);
+                    if (r.breakdown != null) {
+                        sb.append(", 分项(base=").append(String.format("%.1f", r.breakdown.baseScore))
+                                .append(", 生存=").append(String.format("%.1f", r.breakdown.survivalBonus))
+                                .append(", 端口=").append(String.format("%.2f", r.breakdown.portMult))
+                                .append(")");
+                    }
+                    return sb.toString();
+                }
+                case "QUERY_DECK":
+                    return buildDeckContext();
+                case "QUERY_ROUTE": {
+                    GlobalRunPlan plan = GlobalRunPlan.fromCurrentRun();
+                    StringBuilder sb = new StringBuilder();
+                    sb.append("第").append(plan.actNumber).append("幕");
+                    if (plan.phase != null) {
+                        sb.append("(").append(plan.phase.name()).append(")");
+                    }
+                    if (plan.actsRemaining > 0) {
+                        sb.append(", 剩余").append(plan.actsRemaining).append("幕");
+                    }
+                    if (!plan.nextRoom.isEmpty()) {
+                        sb.append(", 下一房=").append(plan.nextRoom);
+                        if (plan.roomsUntilElite >= 0) {
+                            sb.append(", 距精英").append(plan.roomsUntilElite).append("房");
+                        } else {
+                            sb.append(", 前方无精英");
+                        }
+                    } else {
+                        sb.append(", 路线未知");
+                    }
+                    if (!plan.upcomingThisAct.isEmpty()) {
+                        sb.append(", 前方路线=").append(String.join("", plan.upcomingThisAct));
+                    }
+                    return sb.toString();
+                }
+                default:
+                    return "未知工具";
+            }
+        };
+    }
     private static String currentRewardKey(CardRewardScreen screen) {
         if (screen == null || screen.rewardGroup == null) {
             return "";

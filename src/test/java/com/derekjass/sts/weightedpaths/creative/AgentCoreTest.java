@@ -187,4 +187,85 @@ public class AgentCoreTest {
         assertTrue(d.valid);
         assertEquals(Tool.DO_NOTHING, d.tool); // 高血多卡兜底 DO_NOTHING
     }
+    @Test
+    public void parseToolCallValidEvaluate() {
+        String raw = "{\"action\":\"call_tool\",\"tool\":\"EVALUATE_CARD\",\"args\":{\"cardId\":\"Backstab\"}}";
+        AgentCore.ToolCall c = AgentCore.parseToolCall(raw);
+        assertTrue(c.valid);
+        assertEquals("EVALUATE_CARD", c.tool);
+        assertEquals("Backstab", c.args.get("cardId"));
+    }
+
+    @Test
+    public void parseToolCallUnknownToolInvalid() {
+        assertFalse(AgentCore.parseToolCall(
+                "{\"action\":\"call_tool\",\"tool\":\"DELETE_DATABASE\",\"args\":{}}").valid);
+        assertFalse(AgentCore.parseToolCall("not json").valid);
+        assertFalse(AgentCore.parseToolCall(null).valid);
+    }
+
+    @Test
+    public void parseToolCallEvaluateRequiresCardId() {
+        assertFalse(AgentCore.parseToolCall(
+                "{\"action\":\"call_tool\",\"tool\":\"EVALUATE_CARD\",\"args\":{}}").valid);
+    }
+
+    @Test
+    public void runWithToolCallThenFinalDecision() {
+        final boolean[] called = {false};
+        AiRecommender ai = prompt -> {
+            if (!called[0]) {
+                called[0] = true;
+                return "{\"action\":\"call_tool\",\"tool\":\"EVALUATE_CARD\",\"args\":{\"cardId\":\"Backstab\"}}";
+            }
+            return json("ADJUST_RECOMMENDATION", "Backstab", "查证后推荐", 0.9);
+        };
+        AgentCore.ToolExecutor exec = (tool, args) -> "评分=80.0, 评级=A";
+        Decision d = AgentCore.run(new State(2, 50, "", 3, Arrays.asList("Backstab", "Footwork")),
+                ai, ALL, IDS, exec);
+        assertTrue(d.valid);
+        assertEquals(Tool.ADJUST_RECOMMENDATION, d.tool);
+        assertEquals("Backstab", d.argument);
+        assertTrue(called[0]);
+    }
+
+    @Test
+    public void runToolCallWithoutExecutorFallsBack() {
+        AiRecommender ai = prompt -> "{\"action\":\"call_tool\",\"tool\":\"QUERY_DECK\",\"args\":{}}";
+        State s = new State(3, 80, "", 5, Arrays.asList("A", "B"));
+        Decision d = AgentCore.run(s, ai, ALL, IDS, null);
+        assertTrue(d.valid);
+        assertEquals(Tool.DO_NOTHING, d.tool); // 高血多卡兜底
+    }
+
+    @Test
+    public void runToolCallLoopExhaustsThenFallsBack() {
+        // AI 永远只发查询 → 超轮数后兜底
+        AiRecommender ai = prompt -> "{\"action\":\"call_tool\",\"tool\":\"QUERY_DECK\",\"args\":{}}";
+        State s = new State(1, 30, "", -3, Arrays.asList("A"));
+        AgentCore.ToolExecutor exec = (tool, args) -> "牌组10张";
+        Decision d = AgentCore.run(s, ai, ALL, IDS, exec);
+        assertTrue(d.valid);
+        assertEquals(Tool.SET_WARNING, d.tool); // 低血兜底警告
+    }
+
+    @Test
+    public void runExecutorThrowsFallsBack() {
+        AiRecommender ai = prompt -> "{\"action\":\"call_tool\",\"tool\":\"QUERY_DECK\",\"args\":{}}";
+        AgentCore.ToolExecutor exec = (tool, args) -> {
+            throw new RuntimeException("boom");
+        };
+        State s = new State(3, 80, "", 5, Arrays.asList("A", "B"));
+        Decision d = AgentCore.run(s, ai, ALL, IDS, exec);
+        assertEquals(Tool.DO_NOTHING, d.tool);
+    }
+
+    @Test
+    public void buildPromptContainsQueryTools() {
+        State s = new State(2, 50, "", 0, Arrays.asList("A", "B"));
+        String p = AgentCore.buildPrompt(s, ALL);
+        assertTrue(p.contains("EVALUATE_CARD"));
+        assertTrue(p.contains("QUERY_DECK"));
+        assertTrue(p.contains("call_tool"));
+    }
 }

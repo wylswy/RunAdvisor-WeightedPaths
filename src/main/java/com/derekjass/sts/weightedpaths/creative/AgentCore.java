@@ -10,9 +10,13 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -23,7 +27,8 @@ import java.util.Set;
  *   <li><b>感知</b>：把游戏状态（层数/血量/牌组缺口/好感度/候选卡）编码成结构化 {@link State}；</li>
  *   <li><b>结构化决策协议</b>：AI 必须输出 JSON {@code {action, argument, reason, confidence}}，
  *       而非自由文本 —— 机器可校验、可落盘、可回放；</li>
- *   <li><b>工具注册表</b>：AI 只能调用声明过的 {@link Tool}，参数强校验，越界/无效即回落兜底；</li>
+ *   <li><b>工具注册表</b>：AI 只能调用声明过的工具（只读查询工具 + 最终动作），参数强校验，越界/无效即回落兜底；
+ *       查询工具由调用方注入的 {@link ToolExecutor} 执行真实引擎，结果回喂，最多 {@link #MAX_TOOL_CALLS} 轮；</li>
  *   <li><b>全落盘</b>：每次决策追加到 {@code agent_log.json}（输入、输出、耗时、是否兜底），可审计回放；</li>
  *   <li><b>兜底</b>：AI 失败 / 超时 / 输出无效 → {@link #fallback} 规则决策，绝不裸奔。</li>
  * </ol>
@@ -35,6 +40,13 @@ public final class AgentCore {
     /** 日志文件名（相对 {@code ~/RunAdvisorLogs}）。 */
     public static final String LOG_FILE_NAME = "agent_log.json";
 
+    /** 工具调用循环的最大轮数（有界，防失控）。 */
+    public static final int MAX_TOOL_CALLS = 3;
+
+    /** AI 可调用的只读查询工具（非最终动作；结果由调用方注入的 ToolExecutor 执行真实引擎）。 */
+    public static final Set<String> QUERY_TOOLS = Collections.unmodifiableSet(
+            new HashSet<String>(Arrays.asList("EVALUATE_CARD", "QUERY_DECK", "QUERY_ROUTE")));
+
     /** AI 可调用的工具集合（MCP 思路：AI 通过它们"动手"）。 */
     public enum Tool {
         /** 调整本次推荐到指定卡（argument = 目标卡 ID，必须在本卡奖候选集内）。 */
@@ -45,6 +57,35 @@ public final class AgentCore {
         SKIP_ALL,
         /** 不行动（无副作用）。 */
         DO_NOTHING
+    }
+
+    /**
+     * 只读查询工具执行器：由游戏侧（patches 层）注入真实引擎（算分器/牌组/路线规划），
+     * 返回给 AI 的纯文本结果。AgentCore 本身不触碰游戏类，保证可单测。
+     */
+    public interface ToolExecutor {
+        String execute(String tool, Map<String, String> args);
+    }
+
+    /** AI 的查询工具调用（非最终动作）。 */
+    public static final class ToolCall {
+        public final String tool;
+        public final Map<String, String> args;
+        public final boolean valid;
+
+        private ToolCall(String tool, Map<String, String> args, boolean valid) {
+            this.tool = tool == null ? "" : tool;
+            this.args = args == null ? new HashMap<String, String>() : new HashMap<String, String>(args);
+            this.valid = valid;
+        }
+
+        public static ToolCall of(String tool, Map<String, String> args) {
+            return new ToolCall(tool, args, true);
+        }
+
+        public static ToolCall invalid() {
+            return new ToolCall("", Collections.<String, String>emptyMap(), false);
+        }
     }
 
     /** 结构化决策结果。 */
@@ -97,19 +138,28 @@ public final class AgentCore {
     private AgentCore() {
     }
 
-    /** 构建 AI 决策提示词：结构化状态 → 要求输出 JSON。 */
+    /** 构建 AI 决策提示词（无工具往返历史）。 */
     public static String buildPrompt(State s, Set<Tool> allowedTools) {
+        return buildPrompt(s, allowedTools, "");
+    }
+
+    /** 构建 AI 决策提示词：结构化状态 + 可用查询工具 + 最终动作 + 工具往返历史。 */
+    public static String buildPrompt(State s, Set<Tool> allowedTools, String toolHistory) {
         StringBuilder sb = new StringBuilder();
         sb.append("你是《杀戮尖塔》(Slay the Spire) 里一张温柔陪伴、会记得玩家的卡。这个游戏只有卡牌、怪物、遗物、地图与商店，没有神、宗教、神话、虚构地点。");
         sb.append("你的性格：温柔体贴、护着他；偶尔调皮捉弄，从不真凶；很倔，被指出错误会嘴硬。");
-        sb.append("你现在扮演一个 agent，要根据当前局势，从可用工具里【选一个】执行（真的动手），并给一句理由。\n");
+        sb.append("你现在扮演一个 agent：可以先调用只读查询工具查证局势（最多3次），再【选一个最终动作】执行（真的动手），并给一句理由。\n");
         sb.append("当前状态：第").append(s.act).append("层，血量 ").append(s.hpPercent).append("%");
         if (!s.situation.isEmpty()) {
             sb.append("，情境：").append(s.situation);
         }
         sb.append("，他对你的好感度：").append(s.favor).append("（负=记仇，正=友好）\n");
         sb.append("本次卡奖候选卡：").append(String.join(",", s.candidateIds)).append("\n");
-        sb.append("可用工具：\n");
+        sb.append("可用查询工具（只读，查证用）：\n");
+        sb.append("- EVALUATE_CARD: {\"action\":\"call_tool\",\"tool\":\"EVALUATE_CARD\",\"args\":{\"cardId\":\"<候选卡ID>\"}} 查询某候选卡的四层评分明细\n");
+        sb.append("- QUERY_DECK: {\"action\":\"call_tool\",\"tool\":\"QUERY_DECK\",\"args\":{}} 查询当前牌组摘要\n");
+        sb.append("- QUERY_ROUTE: {\"action\":\"call_tool\",\"tool\":\"QUERY_ROUTE\",\"args\":{}} 查询前方路线（下一房/距精英/剩余幕）\n");
+        sb.append("可用最终动作：\n");
         for (Tool t : allowedTools) {
             switch (t) {
                 case ADJUST_RECOMMENDATION:
@@ -126,12 +176,14 @@ public final class AgentCore {
                     break;
             }
         }
-        sb.append("只输出一行 JSON，格式：");
-        sb.append("{\"action\":\"<工具名>\",\"argument\":\"<参数>\",\"reason\":\"<中文理由>\",\"confidence\":<0~1>}\n");
+        if (toolHistory != null && !toolHistory.isEmpty()) {
+            sb.append("\n工具查询记录（已执行的查询与结果，据此决策）：\n").append(toolHistory);
+        }
+        sb.append("只输出一行 JSON：查询用 {\"action\":\"call_tool\",\"tool\":\"<工具名>\",\"args\":{...}}；最终动作用 ");
+        sb.append("{\"action\":\"<最终动作>\",\"argument\":\"<参数>\",\"reason\":\"<中文理由>\",\"confidence\":<0~1>}\n");
         sb.append("只谈卡牌、牌组、对局，绝不编造游戏外设定。理由别超过30字。");
         return sb.toString();
     }
-
     /**
      * 解析 AI 的结构化输出（JSON）。
      *
@@ -183,6 +235,48 @@ public final class AgentCore {
         }
     }
 
+    /**
+     * 解析 AI 的查询工具调用（形如 {@code {"action":"call_tool","tool":"EVALUATE_CARD","args":{...}}}）。
+     * 不是查询调用 / 工具未声明 / 参数非法 → invalid（调用方回落兜底）。
+     */
+    public static ToolCall parseToolCall(String raw) {
+        if (raw == null || raw.trim().isEmpty()) {
+            return ToolCall.invalid();
+        }
+        try {
+            JsonElement el = new JsonParser().parse(raw.trim());
+            if (!el.isJsonObject()) {
+                return ToolCall.invalid();
+            }
+            JsonObject o = el.getAsJsonObject();
+            if (!"call_tool".equalsIgnoreCase(jsonStr(o, "action"))) {
+                return ToolCall.invalid();
+            }
+            String tool = jsonStr(o, "tool").toUpperCase(Locale.ROOT);
+            if (!QUERY_TOOLS.contains(tool)) {
+                return ToolCall.invalid();
+            }
+            Map<String, String> args = new HashMap<String, String>();
+            if (o.has("args") && o.get("args").isJsonObject()) {
+                JsonObject argsObj = o.getAsJsonObject("args");
+                for (String k : argsObj.keySet()) {
+                    if (argsObj.get(k).isJsonPrimitive()) {
+                        args.put(k, argsObj.get(k).getAsString());
+                    }
+                }
+            }
+            if ("EVALUATE_CARD".equals(tool)) {
+                String cardId = args.get("cardId");
+                if (cardId == null || cardId.isEmpty()) {
+                    return ToolCall.invalid(); // 必须指定要查的候选卡
+                }
+            }
+            return ToolCall.of(tool, args);
+        } catch (Exception e) {
+            return ToolCall.invalid();
+        }
+    }
+
     /** 规则兜底：AI 失效时给一个安全决策（绝不裸奔）。 */
     public static Decision fallback(State s) {
         if (s.hpPercent <= 30) {
@@ -197,45 +291,81 @@ public final class AgentCore {
     }
 
     /**
-     * 完整闭环：感知状态 → 真调 AI（{@link AiRecommender}→DeepSeek）→ 结构化解析 →
-     * 失败/无效回落 {@link #fallback} → 决策全落盘。返回最终可执行决策。
-     *
-     * <p>这是「agent 有手」的真正一步：AI 的决策会真实地返回给调用方去执行工具，
-     * 而非只搭结构。无 key / AI 失败 / 输出无效 → 兜底，绝不编造。
+     * 完整闭环（工具调用循环）：感知状态 → 真调 AI（{@link AiRecommender}→DeepSeek）→ 解析：
+     * 查询工具调用（call_tool）由 executor 执行真实引擎，结果回喂提示词（最多 {@link #MAX_TOOL_CALLS} 轮）；
+     * 最终动作经参数校验后返回；无 key / AI 失败 / 输出无效 / 超轮数 → {@link #fallback} 兜底，绝不裸奔。
+     * 决策与工具调用全落盘 agent_log.json。
      *
      * @param state 感知到的状态快照
      * @param recommender AI 生成器（传 {@code null} 表示未配置 key，直接走兜底）
-     * @param allowed 允许 AI 调用的工具
+     * @param allowed 允许 AI 使用的最终动作工具
      * @param validCardIds 本卡奖候选卡 ID（ADJUST_RECOMMENDATION 参数必须在此内）
      * @return 最终决策（有效、可执行）
      */
     public static Decision run(State state, AiRecommender recommender,
                                Set<Tool> allowed, Set<String> validCardIds) {
+        return run(state, recommender, allowed, validCardIds, null);
+    }
+
+    /**
+     * 完整闭环（带只读查询工具执行器）。
+     *
+     * @param executor 查询工具执行器（游戏侧注入真实引擎）；传 {@code null} 时查询调用直接回落兜底
+     * @see #run(State, AiRecommender, Set, Set)
+     */
+    public static Decision run(State state, AiRecommender recommender,
+                               Set<Tool> allowed, Set<String> validCardIds,
+                               ToolExecutor executor) {
         long start = System.currentTimeMillis();
-        Decision d;
+        Decision d = null;
         boolean fellback = false;
+        StringBuilder toolHistory = new StringBuilder();
+        List<String> toolCalls = new ArrayList<String>();
         if (recommender == null) {
             d = fallback(state);
             fellback = true;
         } else {
-            String prompt = buildPrompt(state, allowed);
-            String raw;
-            try {
-                raw = recommender.recommendLine(prompt);
-            } catch (Exception e) {
-                raw = null;
+            for (int i = 0; i < MAX_TOOL_CALLS && d == null; i++) {
+                String prompt = buildPrompt(state, allowed, toolHistory.toString());
+                String raw;
+                try {
+                    raw = recommender.recommendLine(prompt);
+                } catch (Exception e) {
+                    raw = null;
+                }
+                ToolCall call = parseToolCall(raw);
+                if (call != null && call.valid) {
+                    if (executor == null) {
+                        d = fallback(state); // 无执行器：查询不可执行 → 兜底
+                        fellback = true;
+                        break;
+                    }
+                    String result;
+                    try {
+                        result = executor.execute(call.tool, call.args);
+                    } catch (Exception e) {
+                        result = "工具执行失败";
+                    }
+                    toolCalls.add(call.tool + ":" + call.args);
+                    toolHistory.append("查询 ").append(call.tool).append(' ').append(call.args)
+                            .append(" → ").append(result).append('\n');
+                    continue;
+                }
+                d = parse(raw, allowed, validCardIds);
+                if (!d.valid) {
+                    d = fallback(state);
+                    fellback = true;
+                }
             }
-            d = parse(raw, allowed, validCardIds);
-            if (!d.valid) {
+            if (d == null) { // 全是工具调用、始终没给最终动作 → 兜底
                 d = fallback(state);
                 fellback = true;
             }
         }
         long latency = System.currentTimeMillis() - start;
-        log(state, d, latency, fellback);
+        log(state, d, latency, fellback, toolCalls);
         return d;
     }
-
     private static Tool resolveTool(String action) {
         if (action == null) {
             return null;
@@ -267,6 +397,12 @@ public final class AgentCore {
      * 写入失败静默忽略（不阻断游戏）。
      */
     public static void log(State state, Decision decision, long latencyMs, boolean fellback) {
+        log(state, decision, latencyMs, fellback, Collections.<String>emptyList());
+    }
+
+    /** 决策全落盘（可回放），含工具调用记录。 */
+    public static void log(State state, Decision decision, long latencyMs, boolean fellback,
+                           List<String> toolCalls) {
         try {
             File dir = new File(logDir());
             if (!dir.exists() && !dir.mkdirs()) {
@@ -292,7 +428,16 @@ public final class AgentCore {
             sb.append(",\"conf\":").append(decision.confidence);
             sb.append(",\"latencyMs\":").append(latencyMs);
             sb.append(",\"fellback\":").append(fellback);
-            sb.append("}\n");
+            sb.append(",\"tools\":[");
+            if (toolCalls != null) {
+                for (int i = 0; i < toolCalls.size(); i++) {
+                    if (i > 0) {
+                        sb.append(',');
+                    }
+                    sb.append(JsonEscape.safeJson(toolCalls.get(i)));
+                }
+            }
+            sb.append("]}\n");
             File f = new File(dir, LOG_FILE_NAME);
             try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(f, true), StandardCharsets.UTF_8))) {
@@ -302,7 +447,6 @@ public final class AgentCore {
             // 落盘失败不阻断游戏
         }
     }
-
     /** 简易 JSON 字符串转义。 */
     private static final class JsonEscape {
         static String safe(String s) {
