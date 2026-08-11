@@ -1,10 +1,11 @@
 package com.derekjass.sts.weightedpaths.paths;
 
 import com.derekjass.sts.weightedpaths.ui.ModUiStrings;
-import com.megacrit.cardcrawl.map.MapRoomNode;
-import com.megacrit.cardcrawl.rooms.AbstractRoom;
-import com.megacrit.cardcrawl.rooms.TreasureRoom;
 
+/**
+ * 路径符号计数（纯数据 + 纯逻辑，不依赖游戏类）。
+ * 从游戏地图节点统计请用 {@link NodePathSymbolCounts}（游戏层）。
+ */
 public final class PathSymbolCounts {
 
     public final int eliteCount;
@@ -29,52 +30,7 @@ public final class PathSymbolCounts {
         this.monsterCount = monsterCount;
     }
 
-    public static PathSymbolCounts fromNodes(Iterable<MapRoomNode> nodes) {
-        int elites = 0;
-        int rests = 0;
-        int shops = 0;
-        int events = 0;
-        int treasures = 0;
-        int monsters = 0;
-        for (MapRoomNode node : nodes) {
-            if (node == null) {
-                continue;
-            }
-            String symbol;
-            try {
-                symbol = resolveSymbol(node);
-            } catch (Exception ignored) {
-                continue;
-            }
-            if (symbol == null || symbol.isEmpty()) {
-                continue;
-            }
-            switch (symbol) {
-                case "E":
-                    elites++;
-                    break;
-                case "R":
-                    rests++;
-                    break;
-                case "$":
-                    shops++;
-                    break;
-                case "?":
-                    events++;
-                    break;
-                case "T":
-                    treasures++;
-                    break;
-                case "M":
-                    monsters++;
-                    break;
-                default:
-                    break;
-            }
-        }
-        return new PathSymbolCounts(elites, rests, shops, events, treasures, monsters);
-    }
-
+    /** 从符号序列统计计数（null/空符号跳过）。 */
     public static PathSymbolCounts fromSymbols(Iterable<String> symbols) {
         int elites = 0;
         int rests = 0;
@@ -113,25 +69,6 @@ public final class PathSymbolCounts {
             }
         }
         return new PathSymbolCounts(elites, rests, shops, events, treasures, monsters);
-    }
-
-    private static String resolveSymbol(MapRoomNode node) {
-        try {
-            AbstractRoom room = node.getRoom();
-            if (room instanceof TreasureRoom) {
-                return "T";
-            }
-            String symbol = RouteFormatUtil.symbolOrEmpty(node);
-            if (!symbol.isEmpty()) {
-                return symbol;
-            }
-            if (room != null) {
-                return RouteFormatUtil.normalizeSymbol(room.getMapSymbol());
-            }
-        } catch (Exception ignored) {
-            // Room may not be assigned yet during map transitions.
-        }
-        return "";
     }
 
     public String formatRouteSummary() {

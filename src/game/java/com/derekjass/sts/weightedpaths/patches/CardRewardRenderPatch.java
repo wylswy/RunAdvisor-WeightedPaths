@@ -48,6 +48,7 @@ public class CardRewardRenderPatch {
     private static final Color MISCHIEF_COLOR = new Color(1.0f, 0.72f, 0.35f, 1.0f);
     // 抓牌历史"已有 N 张"的次要文字色
     private static final Color HAVING_COLOR = new Color(0.78f, 0.78f, 0.78f, 1.0f);
+
     private static String lastRewardLogKey = "";
     /** 本次卡奖推荐抓的卡 ID（供 onClose 检测违背）。 */
     private static String lastRecommendedId = "";
@@ -146,14 +147,18 @@ public class CardRewardRenderPatch {
             // 信任调整（机制层）：不友好时确定性推荐失真（不依赖 AI/key，总是生效）；AI 有效决策随后覆盖
             RecommendationPolicy.Decision policy = RecommendationPolicy.decide(
                     buildPolicyCandidates(__instance, scored),
-                    com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor());
+                    com.derekjass.sts.weightedpaths.creative.CardMoodEngine.favor(),
+                    PactManager.isGrudgeActive());
             if (!skipAll && policy.trustAdjusted && policy.cardId != null) {
                 AbstractCard picked = findById(__instance, policy.cardId);
                 if (picked != null) {
                     bestCard = picked;
                     CardRecommendation rec = scored.get(picked);
                     if (rec != null && rec.reason != null && !rec.reason.contains("闹脾气")) {
-                        scored.put(picked, new CardRecommendation(rec.grade, rec.score, rec.reason + "（它在闹脾气，推荐可能失真）"));
+                        String grudgeSuffix = PactManager.isGrudgeActive()
+                                ? "（它还记着你的账，推荐偏保守）"
+                                : "（它在闹脾气，推荐可能失真）";
+                        scored.put(picked, new CardRecommendation(rec.grade, rec.score, rec.reason + grudgeSuffix));
                     }
                 }
             }
@@ -553,6 +558,8 @@ public class CardRewardRenderPatch {
         }
     }
 
+
+
     private static int countInDeck(String cardId) {
         if (cardId == null) {
             return 0;
@@ -662,11 +669,6 @@ public class CardRewardRenderPatch {
             if (card != null) {
                 playerPickedId = card.cardID;
                 cardNameMap.put(card.cardID, card.name);
-                // 契约：抓攻击牌检测（「本幕不抓攻击牌」契约的违背判定）
-                String pactMsg = PactManager.onCardPicked(card.type == AbstractCard.CardType.ATTACK);
-                if (!pactMsg.isEmpty()) {
-                    ChatBoxUi.get().core().addCardMessage(pactMsg);
-                }
             }
         }
     }

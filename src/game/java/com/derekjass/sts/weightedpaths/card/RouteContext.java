@@ -2,6 +2,7 @@ package com.derekjass.sts.weightedpaths.card;
 
 import com.derekjass.sts.weightedpaths.WeightedPaths;
 import com.derekjass.sts.weightedpaths.paths.MapPath;
+import com.derekjass.sts.weightedpaths.paths.NodePathSymbolCounts;
 import com.derekjass.sts.weightedpaths.paths.PathSymbolCounts;
 import com.megacrit.cardcrawl.dungeons.AbstractDungeon;
 import com.megacrit.cardcrawl.map.MapRoomNode;
@@ -49,7 +50,7 @@ public final class RouteContext {
                 nodes.add(node);
             }
         }
-        PathSymbolCounts counts = PathSymbolCounts.fromNodes(nodes);
+        PathSymbolCounts counts = NodePathSymbolCounts.fromNodes(nodes);
         return new RouteContext(counts.eliteCount, counts.restCount, counts.shopCount, act);
     }
 }

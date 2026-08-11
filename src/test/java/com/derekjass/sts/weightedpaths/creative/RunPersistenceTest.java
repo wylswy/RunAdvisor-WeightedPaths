@@ -131,13 +131,24 @@ public class RunPersistenceTest {
     }
 
     @Test
+    public void save_doesNotLeaveTmpFile() {
+        String dir = tmpDir();
+        RunPersistence.setCustomDirForTest(dir);
+        RunPersistence.saveCurrentRun(SEED, TS, null, 1, 0, 0, null);
+        java.io.File f = new java.io.File(dir, RunPersistence.FILE_NAME);
+        java.io.File tmp = new java.io.File(dir, RunPersistence.FILE_NAME + ".tmp");
+        assertTrue("状态文件应存在", f.exists());
+        assertFalse("原子写不应残留临时文件", tmp.exists());
+    }
+
+    @Test
     public void pactState_roundTrip() {
         RunPersistence.setCustomDirForTest(tmpDir());
         JsonObject pact = new JsonObject();
         pact.addProperty("lastAct", 2);
         pact.addProperty("conservative", true);
         JsonObject inner = new JsonObject();
-        inner.addProperty("condition", "NO_ATTACK_CARDS_THIS_ACT");
+        inner.addProperty("condition", "REACH_ELITE_HP_ABOVE_50");
         inner.addProperty("reward", "CONSERVATIVE_ADVICE");
         inner.addProperty("act", 1);
         inner.addProperty("status", "ACCEPTED");

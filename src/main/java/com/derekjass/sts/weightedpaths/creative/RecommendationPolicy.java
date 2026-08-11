@@ -33,19 +33,28 @@ public final class RecommendationPolicy {
     private static final double TRUST_UNHAPPY = 0.80;
     /** 友好：完全按规则分，无失真。 */
     private static final double TRUST_FRIENDLY = 1.0;
+    /** 违约记仇的额外保守系数：叠加在好感度曲线上（任何好感下生效）。 */
+    private static final double GRUDGE_FACTOR = 0.90;
 
     private RecommendationPolicy() {
     }
 
     /** 好感度 → 推荐质量系数（显式曲线；友好=1.0，越不友好系数越低）。 */
     public static double trustFactor(int favor) {
+        return trustFactor(favor, false);
+    }
+
+    /** 好感度 + 违约记仇 → 推荐质量系数（记仇时再叠 0.9 保守系数）。 */
+    public static double trustFactor(int favor, boolean grudge) {
+        double base;
         if (favor <= RESENTFUL_FAVOR) {
-            return TRUST_RESENTFUL;
+            base = TRUST_RESENTFUL;
+        } else if (favor <= UNHAPPY_FAVOR) {
+            base = TRUST_UNHAPPY;
+        } else {
+            base = TRUST_FRIENDLY;
         }
-        if (favor <= UNHAPPY_FAVOR) {
-            return TRUST_UNHAPPY;
-        }
-        return TRUST_FRIENDLY;
+        return grudge ? base * GRUDGE_FACTOR : base;
     }
 
     /** 信任调整决策结果（纯数据）。 */
@@ -86,6 +95,15 @@ public final class RecommendationPolicy {
      * @return 信任调整决策；空候选时 cardId 为空串、trustAdjusted=false
      */
     public static Decision decide(List<AiRecommendationEngine.Candidate> candidates, int favor) {
+        return decide(candidates, favor, false);
+    }
+
+    /**
+     * 同 {@link #decide(List, int)}，但可叠加「违约记仇」保守系数。
+     *
+     * @param grudge 违约记仇中（推荐额外偏保守）
+     */
+    public static Decision decide(List<AiRecommendationEngine.Candidate> candidates, int favor, boolean grudge) {
         if (candidates == null || candidates.isEmpty()) {
             return new Decision("", "", false, 1.0, 0.0, 0.0);
         }
@@ -101,7 +119,7 @@ public final class RecommendationPolicy {
         if (best == null) {
             return new Decision("", "", false, 1.0, 0.0, 0.0);
         }
-        double trust = trustFactor(favor);
+        double trust = trustFactor(favor, grudge);
         double ruleBestScore = best.score;
         if (trust >= 1.0) {
             return new Decision(best.cardId, best.cardId, false, trust, ruleBestScore, ruleBestScore);

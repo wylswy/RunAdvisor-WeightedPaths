@@ -38,6 +38,7 @@ public final class CardUiStrings {
     // 抓牌历史：卡组已有同名牌数（第一层·基础信息透视）
     public static final String HAVING_COUNT = "\u5DF2\u6709 %d \u5F20";
 
+
     public static final String REASON_PORT_DAMAGE = "\u3010\u7AEF\u53E3\u3011\u8F93\u51FA\u504F\u5F31\uFF0C\u8865\u4F24\u5BB3\u4F18\u5148";
     public static final String REASON_PORT_BLOCK = "\u3010\u7AEF\u53E3\u3011\u9632\u5FA1\u504F\u5F31\uFF0C\u8865\u683C\u6321\u4F18\u5148";
     public static final String REASON_PORT_ENGINE = "\u3010\u7AEF\u53E3\u3011\u8FD0\u8F6C\u504F\u5F31\uFF0C\u62BD\u724C/\u80FD\u91CF\u4F18\u5148";

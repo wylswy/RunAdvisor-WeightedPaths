@@ -3,11 +3,28 @@ name: CI
 on:
   push:
     branches: [ main ]
+    tags: [ 'v*' ]
   pull_request:
 
 jobs:
-  test:
-    name: mvn test
+  # 纯逻辑门禁：不依赖游戏 jar，永远跑——CI 永不空转
+  pure-test:
+    name: Pure logic tests (no game jar)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '8'
+          cache: maven
+      - name: Run pure logic tests
+        run: mvn -B test -Ppure
+
+  # 全量门禁 + 交付产物：需要游戏本体 jar（经 secret 提供）；未配置时该 job 跳过，pure-test 仍在跑
+  game-test:
+    name: Full tests + jar artifact (with game jar)
+    needs: pure-test
     runs-on: ubuntu-latest
     env:
       GH_ASSETS_TOKEN: ${{ secrets.GH_ASSETS_TOKEN }}
@@ -28,9 +45,37 @@ jobs:
       - name: Fetch game jar (plain URL)
         if: env.GH_ASSETS_TOKEN == '' && env.STS_GAME_JAR_URL != ''
         run: curl -fsSL "$STS_GAME_JAR_URL" -o lib/desktop-1.0.jar
-      - name: Run tests
+      - name: Run full tests
         if: env.GH_ASSETS_TOKEN != '' || env.STS_GAME_JAR_URL != ''
         run: mvn -B test
+      - name: Build deployable jar
+        if: env.GH_ASSETS_TOKEN != '' || env.STS_GAME_JAR_URL != ''
+        run: mvn -B -DskipTests package
+      - name: Upload jar artifact
+        if: env.GH_ASSETS_TOKEN != '' || env.STS_GAME_JAR_URL != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: WeightedPaths-jar
+          path: target/WeightedPaths.jar
+          if-no-files-found: error
       - name: Notice when game jar unavailable
         if: env.GH_ASSETS_TOKEN == '' && env.STS_GAME_JAR_URL == ''
-        run: echo "::notice::未配置 GH_ASSETS_TOKEN/ASSETS_REPO 或 STS_GAME_JAR_URL，跳过游戏依赖测试。配置方法见 docs/CI-SETUP.md。"
+        run: echo "::notice::未配置 GH_ASSETS_TOKEN/ASSETS_REPO 或 STS_GAME_JAR_URL，game-test 跳过（无打包产物）；pure-test 门禁仍在跑。配置方法见 docs/CI-SETUP.md。"
+
+  # 打 v* tag 时发布 GitHub Release（产物来自 game-test job）
+  release:
+    name: Publish GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [ pure-test, game-test ]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: WeightedPaths-jar
+          path: dist
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/WeightedPaths.jar
+          generate_release_notes: true

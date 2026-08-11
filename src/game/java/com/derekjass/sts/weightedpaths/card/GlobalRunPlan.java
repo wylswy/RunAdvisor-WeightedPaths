@@ -1,6 +1,7 @@
 package com.derekjass.sts.weightedpaths.card;
 
 import com.derekjass.sts.weightedpaths.WeightedPaths;
+import com.derekjass.sts.weightedpaths.creative.PactManager;
 import com.derekjass.sts.weightedpaths.paths.MapPath;
 import com.derekjass.sts.weightedpaths.paths.PathSymbolCounts;
 import com.derekjass.sts.weightedpaths.paths.RouteFormatUtil;
@@ -17,7 +18,7 @@ import java.util.List;
  * 整局规划上下文：当前幕 live 剩余路线 + 种子解码的未来幕最优路线。
  * 选牌推荐必须基于此，而非单卡/单幕快照。
  */
-public final class GlobalRunPlan {
+public final class GlobalRunPlan implements PactManager.EliteIntel {
 
     public enum RunPhase {
         /** Act1 前段，求稳发育 */
@@ -107,6 +108,56 @@ public final class GlobalRunPlan {
 
     public boolean eliteWithin(int rooms) {
         return roomsUntilElite >= 0 && roomsUntilElite <= rooms;
+    }
+
+    @Override
+    public int roomsUntilElite() {
+        return roomsUntilElite;
+    }
+
+    @Override
+    public List<String> upcomingThisAct() {
+        return upcomingThisAct;
+    }
+
+    @Override
+    public String nextRoom() {
+        return nextRoom;
+    }
+
+    @Override
+    public int roomsUntilSymbol(String target) {
+        return roomsUntilSymbol(upcomingThisAct, target);
+    }
+
+    @Override
+    public int futureEliteCount() {
+        return sumFutureCounts(true);
+    }
+
+    @Override
+    public int futureRestCount() {
+        return sumFutureCounts(false);
+    }
+
+    @Override
+    public double routeValueLead() {
+        return WeightedPaths.getTopRouteLead();
+    }
+
+    /** 未来各幕（不含当前幕）的规划计数合计：精英或火堆。 */
+    private int sumFutureCounts(boolean elite) {
+        try {
+            int sum = 0;
+            for (ActMapSummary s : SeedOracle.getPreviews()) {
+                if (s != null && s.actNumber > actNumber) {
+                    sum += elite ? s.getPlannedCounts().eliteCount : s.getPlannedCounts().restCount;
+                }
+            }
+            return sum;
+        } catch (Exception ignored) {
+            return 0;
+        }
     }
 
     private static RunPhase resolvePhase(int act, int floor) {

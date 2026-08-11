@@ -3,9 +3,11 @@ package com.derekjass.sts.weightedpaths;
 import basemod.BaseMod;
 import basemod.interfaces.PostInitializeSubscriber;
 import basemod.interfaces.StartGameSubscriber;
+import com.derekjass.sts.weightedpaths.card.GlobalRunPlan;
 import com.derekjass.sts.weightedpaths.helpers.RelicTracker;
 import com.derekjass.sts.weightedpaths.paths.MapPath;
-import com.derekjass.sts.weightedpaths.paths.PathSymbolCounts;
+import com.derekjass.sts.weightedpaths.paths.NodePathSymbolCounts;
+import com.derekjass.sts.weightedpaths.paths.RouteSafetyRules;
 import com.derekjass.sts.weightedpaths.paths.UnexpectedStateException;
 import com.derekjass.sts.weightedpaths.ui.ModFonts;
 import com.derekjass.sts.weightedpaths.ui.config.Config;
@@ -51,8 +53,6 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
 
     private static String currentActRouteStats = "";
 
-    /** 低血保命硬规则阈值：血量比例低于此值且地图有火堆时，强制只推荐含火堆的路线。 */
-    private static final double LOW_HP_FORCE_REST_RATIO = 0.30;
 
     private WeightedPaths() {
         BaseMod.subscribe(this);
@@ -111,8 +111,8 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
             }
             // 低血保命硬规则：血量比例低于阈值且有含火堆的路线时，强制只推荐含火堆的路线。
             // 过滤后为空（地图无火堆或够不到）则回退原列表，避免无路可走。
-            if (AbstractDungeon.player.currentHealth > 0
-                    && (double) AbstractDungeon.player.currentHealth / AbstractDungeon.player.maxHealth < LOW_HP_FORCE_REST_RATIO) {
+            if (RouteSafetyRules.shouldForceRestRoute(AbstractDungeon.player.currentHealth,
+                    AbstractDungeon.player.maxHealth)) {
                 List<MapPath> restPaths = paths.stream().filter(MapPath::hasRest).collect(Collectors.toList());
                 if (!restPaths.isEmpty()) {
                     paths = restPaths;
@@ -165,16 +165,6 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         regeneratePaths();
     }
 
-    /**
-     * 判断低血保命硬规则是否应生效（可测试的纯判断）。
-     *
-     * @param currentHp 当前血量
-     * @param maxHp     最大血量
-     * @return 血量比例低于阈值时返回 true
-     */
-    public static boolean shouldForceRestRoute(int currentHp, int maxHp) {
-        return maxHp > 0 && currentHp > 0 && (double) currentHp / maxHp < LOW_HP_FORCE_REST_RATIO;
-    }
 
     public static void refreshCurrentActRouteDisplay() {
         currentActRouteStats = "";
@@ -190,7 +180,7 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
             return;
         }
         try {
-            currentActRouteStats = PathSymbolCounts.fromNodes(routeNodes).formatRouteSummary();
+            currentActRouteStats = NodePathSymbolCounts.fromNodes(routeNodes).formatRouteSummary();
         } catch (Exception e) {
             currentActRouteStats = "";
             logger.warn("Failed to update current act route display.", e);
@@ -236,6 +226,14 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         return paths.get(0);
     }
 
+    /** 最优路线估值领先次优的差值；路线不足两条时返回 NaN（无对比意义）。 */
+    public static double getTopRouteLead() {
+        if (paths.size() < 2) {
+            return Double.NaN;
+        }
+        return paths.get(0).getValue() - paths.get(1).getValue();
+    }
+
     private static void initializeWeights() {
         for (Map.Entry<String, Double> entry : com.derekjass.sts.weightedpaths.paths.SilentRouteValuation.DEFAULT_MENU_WEIGHTS.entrySet()) {
             weights.put(entry.getKey(), entry.getValue());
@@ -255,6 +253,14 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         Config.initialize();
         // 包装输入处理器：让聊天框能接收键盘（英文直接打字，中文 Ctrl+V 粘贴）
         ChatInputProcessor.install();
+        // 契约奖励文案需要路线信息：由游戏层注入（PactManager 本身保持纯逻辑，可在无游戏 jar 的门禁里单测）
+        PactManager.setEliteIntelProvider(() -> {
+            try {
+                return GlobalRunPlan.fromCurrentRun();
+            } catch (Throwable t) {
+                return null;
+            }
+        });
         // 对话每次变化即落盘，SL 重进可恢复（Save/Load 保持卡的记忆）
         ChatBoxUi.get().core().setOnChange(WeightedPaths::saveCurrentRunState);
         logger.info("Run Advisor 1.5.0 更新：AI 先查证再拍板推荐 + 卡会记得你/会记仇/会陪你聊天/会跟你打赌（温柔陪伴型）。");
@@ -279,6 +285,8 @@ public class WeightedPaths implements PostInitializeSubscriber, StartGameSubscri
         } else {
             // 全新一局：清空旧对话 + 重置好感度，落盘新指纹
             core.clear();
+            // 探针口径：聊天框默认收起，避免跨局保持显示导致“打开次数”不计入新局
+            ChatBoxUi.get().setVisible(false);
             CardMoodEngine.reset();
             PactManager.resetForRun();
             // 卡奖去重缓存必须新局重置：日志关闭时它也会累积，否则跨局同楼层同卡组会串 key

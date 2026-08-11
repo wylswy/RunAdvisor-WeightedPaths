@@ -18,10 +18,8 @@ import com.google.gson.JsonObject;
  */
 public final class PactEngine {
 
-    /** 契约条件。 */
+    /** 契约条件（当前仅保留「以 ≥50% 血量到达下一精英」；攻击牌禁令经实测判定不可生存，已下架）。 */
     public enum Condition {
-        /** 本幕内不再抓攻击牌（抓到即违背）。 */
-        NO_ATTACK_CARDS_THIS_ACT,
         /** 以 ≥50% 血量到达下一精英。 */
         REACH_ELITE_HP_ABOVE_50
     }
@@ -86,23 +84,18 @@ public final class PactEngine {
      * 提出一份契约；已有未决契约时返回 null（一次只谈一份）。
      *
      * @param act 当前幕（1 起）
-     * @param deckNeedsDiscipline 牌组是否需要约束（如缺防/贪攻 → 提「不抓攻击牌」）
      * @param seedAvailable 种子预览是否可用（决定奖励能否揭示精英）
      */
-    public Pact propose(int act, boolean deckNeedsDiscipline, boolean seedAvailable) {
+    public Pact propose(int act, boolean seedAvailable) {
         if (hasActive()) {
             return null;
         }
-        Condition condition;
-        if (act <= 1 && deckNeedsDiscipline) {
-            condition = Condition.NO_ATTACK_CARDS_THIS_ACT;
-        } else {
-            condition = Condition.REACH_ELITE_HP_ABOVE_50;
-        }
         Reward reward = seedAvailable ? Reward.REVEAL_NEXT_ELITE : Reward.CONSERVATIVE_ADVICE;
-        active = new Pact(condition, reward, act, Status.OFFERED);
+        active = new Pact(Condition.REACH_ELITE_HP_ABOVE_50, reward, act, Status.OFFERED);
         return active;
     }
+
+
 
     /** 接受契约（好感度不变）。 */
     public void accept() {
@@ -118,17 +111,7 @@ public final class PactEngine {
         }
     }
 
-    /** 玩家抓了一张卡（isAttack=攻击牌）。违背返回 -2，无影响返回 0。 */
-    public int onCardPicked(boolean isAttack) {
-        if (active == null || active.status != Status.ACCEPTED) {
-            return 0;
-        }
-        if (active.condition == Condition.NO_ATTACK_CARDS_THIS_ACT && isAttack) {
-            active.status = Status.VIOLATED;
-            return FAVOR_VIOLATE;
-        }
-        return 0;
-    }
+
 
     /** 到达精英（仅 REACH_ELITE_HP_ABOVE_50 契约使用）。达标 → 完成 +2，未达标 → 违背 -2。 */
     public int onEliteReached(int hpPercent) {
@@ -146,14 +129,10 @@ public final class PactEngine {
         return FAVOR_VIOLATE;
     }
 
-    /** 幕结束：NO_ATTACK 未违背 → 完成；REACH_ELITE 没遇到精英直接过幕 → 违背。 */
+    /** 幕结束：REACH_ELITE 没遇到精英直接过幕 → 违背。 */
     public int onActEnd() {
         if (active == null || active.status != Status.ACCEPTED) {
             return 0;
-        }
-        if (active.condition == Condition.NO_ATTACK_CARDS_THIS_ACT) {
-            complete();
-            return FAVOR_COMPLETE;
         }
         active.status = Status.VIOLATED;
         return FAVOR_VIOLATE;

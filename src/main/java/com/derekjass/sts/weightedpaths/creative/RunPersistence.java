@@ -94,9 +94,21 @@ public final class RunPersistence {
             }
             root.add("messages", arr);
             root.add("pact", pactState == null ? new JsonObject() : pactState);
+            // 原子写入：先写临时文件再整体替换，避免崩溃/断电时 run_state.json 半截损坏（SL 恢复的依据）
+            File target = stateFile();
+            File tmp = new File(target.getParentFile(), FILE_NAME + ".tmp");
             try (OutputStreamWriter w = new OutputStreamWriter(
-                    new FileOutputStream(stateFile()), StandardCharsets.UTF_8)) {
+                    new FileOutputStream(tmp), StandardCharsets.UTF_8)) {
                 w.write(root.toString());
+            }
+            try {
+                java.nio.file.Files.move(tmp.toPath(), target.toPath(),
+                        java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (Exception e) {
+                // 替换失败：至少把临时文件清掉，不阻塞游戏
+                if (!tmp.delete()) {
+                    tmp.deleteOnExit();
+                }
             }
         } catch (Exception ignored) {
             // 落盘失败不致命：下次 SL 只是恢复不了对话，不崩游戏

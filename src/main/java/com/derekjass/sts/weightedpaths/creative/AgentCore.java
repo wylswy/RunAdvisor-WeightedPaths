@@ -388,8 +388,18 @@ public final class AgentCore {
         return "";
     }
 
-    /** 决策日志目录：复用 RunAdvisorLogs。 */
+    private static String customLogDir = ""; // 测试可注入临时目录，避免污染真实 agent_log
+
+    /** 仅供测试注入日志目录（空串=用默认 ~/RunAdvisorLogs）。 */
+    public static void setLogDirForTest(String dir) {
+        customLogDir = dir == null ? "" : dir;
+    }
+
+    /** 决策日志目录：默认复用 RunAdvisorLogs；测试可注入临时目录。 */
     private static String logDir() {
+        if (customLogDir != null && !customLogDir.isEmpty()) {
+            return customLogDir;
+        }
         String home = System.getProperty("user.home", ".");
         return home + "/RunAdvisorLogs";
     }
@@ -414,7 +424,8 @@ public final class AgentCore {
             sb.append("{\"t\":").append(System.currentTimeMillis());
             sb.append(",\"act\":").append(state.act);
             sb.append(",\"hp\":").append(state.hpPercent);
-            sb.append(",\"need\":").append(JsonEscape.safe(state.situation));
+            // need 必须走 safeJson（带引号+转义）：此前 safe() 不转义，空值会写出非法 JSON，整行无法解析
+            sb.append(",\"need\":").append(JsonEscape.safeJson(state.situation));
             sb.append(",\"favor\":").append(state.favor);
             sb.append(",\"candidates\":[");
             for (int i = 0; i < state.candidateIds.size(); i++) {
@@ -451,12 +462,26 @@ public final class AgentCore {
             }
             try (BufferedWriter w = new BufferedWriter(new OutputStreamWriter(
                     new FileOutputStream(f, true), StandardCharsets.UTF_8))) {
+                // 半截行隔离：文件存在且末字节不是换行时先补一个换行，崩溃残留的半条记录不再与下一条粘连
+                if (f.exists() && f.length() > 0 && lastByteIsNotNewline(f)) {
+                    w.write("\n");
+                }
                 w.write(sb.toString());
             }
         } catch (Exception ignored) {
             // 落盘失败不阻断游戏
         }
     }
+    /** 检查文件末字节是否不是换行（用于追加日志的半截行隔离）。 */
+    private static boolean lastByteIsNotNewline(File f) {
+        try (java.io.RandomAccessFile raf = new java.io.RandomAccessFile(f, "r")) {
+            raf.seek(raf.length() - 1);
+            return raf.read() != '\n';
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     /** 简易 JSON 字符串转义。 */
     private static final class JsonEscape {
         static String safe(String s) {

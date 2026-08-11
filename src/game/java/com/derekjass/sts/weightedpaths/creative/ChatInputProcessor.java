@@ -22,6 +22,13 @@ public final class ChatInputProcessor implements InputProcessor {
         Gdx.input.setInputProcessor(new ChatInputProcessor(original));
     }
 
+    /** 确保全局输入处理器仍被本包装器接管（游戏切场景会重置处理器，导致打字突然失灵；每帧调用代价极小）。 */
+    public static void ensureInstalled() {
+        if (!(Gdx.input.getInputProcessor() instanceof ChatInputProcessor)) {
+            install();
+        }
+    }
+
     @Override
     public boolean keyDown(int keycode) {
         if (ChatBoxUi.get().isInputMode()) {

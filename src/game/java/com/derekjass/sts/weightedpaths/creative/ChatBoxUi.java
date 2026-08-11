@@ -6,6 +6,7 @@ import com.badlogic.gdx.graphics.Color;
 import com.badlogic.gdx.graphics.Pixmap;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxCore.ChatMessage;
 import com.derekjass.sts.weightedpaths.creative.ChatBoxCore.Sender;
@@ -116,9 +117,16 @@ public final class ChatBoxUi {
             Color c = m.sender == Sender.CARD
                     ? new Color(0.9f, 0.9f, 0.75f, 1.0f)
                     : new Color(0.65f, 0.78f, 1.0f, 1.0f);
-            FontHelper.renderFont(sb, font, prefix + m.text,
-                    boxX + 14.0f * Settings.scale, y, c);
-            y -= 36.0f * Settings.scale;
+            // 长消息（赌约提案/奖励情报）按面板宽度断行，避免横向超出
+            java.util.List<String> lines = wrapText(prefix + m.text, font, boxW - 28.0f * Settings.scale);
+            for (String line : lines) {
+                FontHelper.renderFont(sb, font, line,
+                        boxX + 14.0f * Settings.scale, y, c);
+                y -= 36.0f * Settings.scale;
+                if (y < boxY + 30.0f * Settings.scale) {
+                    break;
+                }
+            }
             if (y < boxY + 30.0f * Settings.scale) {
                 break;
             }
@@ -142,14 +150,30 @@ public final class ChatBoxUi {
                     hasNext ? new Color(0.98f, 0.82f, 0.35f, 1.0f) : new Color(0.45f, 0.45f, 0.45f, 1.0f));
         }
 
-        // 输入入口：输入模式显示输入文本，否则显示提示
-        if (inputMode) {
+        // 底部：契约待定时显示 接受/拒绝 按钮（不依赖打字）；否则输入入口
+        boolean pactOffered = PactManager.engine().current() != null
+                && PactManager.engine().current().status == PactEngine.Status.OFFERED;
+        if (pactOffered && !inputMode) {
+            FontHelper.renderFontCentered(sb, font, "✓ 接受契约",
+                    boxX + boxW / 4.0f, boxY + 16.0f * Settings.scale,
+                    new Color(0.35f, 1.0f, 0.55f, 1.0f));
+            FontHelper.renderFontCentered(sb, font, "✗ 拒绝",
+                    boxX + boxW * 3.0f / 4.0f, boxY + 16.0f * Settings.scale,
+                    new Color(1.0f, 0.55f, 0.45f, 1.0f));
+        } else if (inputMode) {
             String shown = "输入: " + inputText + "|";
             FontHelper.renderFontCentered(sb, font, shown,
                     boxX + boxW / 2.0f, boxY + 16.0f * Settings.scale,
                     new Color(0.35f, 1.0f, 0.55f, 1.0f));
         } else {
-            FontHelper.renderFontCentered(sb, font, "✍ 点这里打字（中文 Ctrl+V 粘贴）",
+            String hint = "✍ 点这里打字（中文 Ctrl+V 粘贴）";
+            if (PactManager.engine().current() != null
+                    && PactManager.engine().current().status == PactEngine.Status.ACCEPTED) {
+                hint = "✍ 点这里打字（契约已接受）";
+            } else if (PactManager.isGrudgeActive()) {
+                hint = "✍ 点这里打字（卡在记仇，推荐会偏保守）";
+            }
+            FontHelper.renderFontCentered(sb, font, hint,
                     boxX + boxW / 2.0f, boxY + 16.0f * Settings.scale,
                     new Color(1.0f, 0.72f, 0.35f, 1.0f));
         }
@@ -157,6 +181,8 @@ public final class ChatBoxUi {
 
     /** 处理输入：按 Tab 呼出/收回；显示时点底部左半"打字"或右半"粘贴"。 */
     public void update() {
+        // 游戏切场景会重置全局输入处理器：每帧确认聊天包装器还在，否则打字会突然失灵
+        ChatInputProcessor.ensureInstalled();
         // 输入模式下 Tab 不干扰打字；非输入模式按 Tab 呼出/收回
         if (Gdx.input.isKeyJustPressed(Input.Keys.TAB)) {
             if (!inputMode) {
@@ -171,6 +197,19 @@ public final class ChatBoxUi {
         if (Gdx.input.justTouched()) {
             float mx = Gdx.input.getX();
             float my = Settings.HEIGHT - Gdx.input.getY();
+            // 契约待定时：底部左半接受 / 右半拒绝（按钮路径，不依赖打字）
+            if (isInInputArea(mx, my)
+                    && PactManager.engine().current() != null
+                    && PactManager.engine().current().status == PactEngine.Status.OFFERED) {
+                boolean accept = mx < boxX + boxW / 2.0f;
+                String reply = PactManager.onChatInput(accept ? "同意" : "拒绝");
+                inputMode = false;
+                inputText.setLength(0);
+                if (!reply.isEmpty()) {
+                    core.addCardMessage(reply);
+                }
+                return;
+            }
             if (isInInputArea(mx, my)) {
                 inputMode = true; // 点击输入框 → 进入输入模式，直接打字
             } else if (inputMode) {
@@ -281,6 +320,30 @@ public final class ChatBoxUi {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    /** 按可用宽度断行（中文为主，逐字累积；复用 GlyphLayout 减少分配）。 */
+    private static java.util.List<String> wrapText(String text, BitmapFont font, float maxWidth) {
+        java.util.List<String> lines = new java.util.ArrayList<>();
+        if (text == null || text.isEmpty()) {
+            lines.add(text == null ? "" : text);
+            return lines;
+        }
+        GlyphLayout layout = new GlyphLayout();
+        StringBuilder cur = new StringBuilder();
+        for (int i = 0; i < text.length(); i++) {
+            char ch = text.charAt(i);
+            layout.setText(font, cur.toString() + ch);
+            if (layout.width > maxWidth && cur.length() > 0) {
+                lines.add(cur.toString());
+                cur.setLength(0);
+            }
+            cur.append(ch);
+        }
+        if (cur.length() > 0) {
+            lines.add(cur.toString());
+        }
+        return lines;
     }
 
     private void layout() {

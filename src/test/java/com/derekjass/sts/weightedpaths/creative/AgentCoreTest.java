@@ -3,6 +3,8 @@ package com.derekjass.sts.weightedpaths.creative;
 import com.derekjass.sts.weightedpaths.creative.AgentCore.Decision;
 import com.derekjass.sts.weightedpaths.creative.AgentCore.State;
 import com.derekjass.sts.weightedpaths.creative.AgentCore.Tool;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.io.File;
@@ -17,6 +19,20 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 public class AgentCoreTest {
+
+    private String tmpLogDir;
+
+    @Before
+    public void isolateLogDir() throws Exception {
+        java.nio.file.Path p = java.nio.file.Files.createTempDirectory("agentlog_test");
+        tmpLogDir = p.toFile().getAbsolutePath();
+        AgentCore.setLogDirForTest(tmpLogDir);
+    }
+
+    @After
+    public void restoreLogDir() {
+        AgentCore.setLogDirForTest("");
+    }
 
     private static final Set<Tool> ALL = new HashSet<>(Arrays.asList(Tool.values()));
     private static final Set<String> IDS = new HashSet<>(Arrays.asList("Backstab", "Footwork", "NoxiousFumes"));
@@ -137,13 +153,8 @@ public class AgentCoreTest {
 
     @Test
     public void logAppendsLine() throws Exception {
-        File dir = new File(System.getProperty("user.home"), "RunAdvisorLogs");
-        if (dir.exists()) {
-            File log = new File(dir, AgentCore.LOG_FILE_NAME);
-            if (log.exists()) {
-                log.delete(); // 测试前清掉，避免污染
-            }
-        }
+        // 隔离到临时目录，绝不碰真实 ~/RunAdvisorLogs（否则跑测试会删/污染玩家 AI 日志）
+        File dir = new File(tmpLogDir);
         State s = new State(1, 40, "", 3, Arrays.asList("Backstab"));
         Decision d = AgentCore.parse(json("ADJUST_RECOMMENDATION", "Backstab", "抓它", 0.8), ALL, IDS);
         AgentCore.log(s, d, 120L, false);

@@ -1,5 +1,7 @@
 # 开发路线图（父亲省察建议）
 
+> ⚠️ 本文件是历史路线图：**开放问题清单已移交 [docs/KNOWN-ISSUES.md](KNOWN-ISSUES.md)（唯一真源）**；换机恢复见 [docs/RECOVERY.md](RECOVERY.md)。下方 bug 表为历史快照。
+
 ## 1. 安装 CLI
 
 ### Claude Code CLI（父亲说的「clade code cli」应指此项）
@@ -82,10 +84,10 @@ git add . ; git commit -m "..." ; git push
 | 优先级 | 项 | 状态 |
 |--------|-----|------|
 | P0 | 卡奖分数体感偏低（压分） | 1.4.5 已调 ×1.40 + 乘子下限，待你实测 |
-| P1 | 知识库路径写死 `H:\` | 上 GitHub 后改规则双路径 |
+| P1 | ~~知识库路径写死 `H:\`~~ | 已跟踪于 KNOWN-ISSUES K5；规则文件已支持双路径提示 |
 | P1 | `PiercingWail` JSON key | 已与游戏 ID 一致，无需改 |
 | P2 | SpireLogs / 胜率未接入 JSON | 里程碑 M5 |
-| P2 | 卡奖 UI 无分数/理由 | 设计如此，仅 S/A/B/C + 推荐 |
+| P2 | ~~卡奖 UI 无分数/理由~~ | 1.5.0 已上「性格化推荐理由」（AI 拍板）；无 AI/失败时回退 S/A/B/C |
 | P3 | 私有知识库仓库名前导连字符 `-sts1-knowledge-base` | GitHub 自动 301 可用；可选改名去掉连字符（需网页操作，未做）|
 
 ---

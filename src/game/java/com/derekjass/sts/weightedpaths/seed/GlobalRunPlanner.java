@@ -1,6 +1,7 @@
 package com.derekjass.sts.weightedpaths.seed;
 
 import com.derekjass.sts.weightedpaths.paths.OracleMapPath;
+import com.derekjass.sts.weightedpaths.paths.NodePathSymbolCounts;
 import com.derekjass.sts.weightedpaths.paths.PathSymbolCounts;
 import com.derekjass.sts.weightedpaths.paths.RouteFormatUtil;
 import com.derekjass.sts.weightedpaths.paths.RouteSimState;
@@ -55,7 +56,7 @@ public final class GlobalRunPlanner {
         }
         paths.sort(Collections.reverseOrder());
         OracleMapPath best = paths.get(0);
-        PathSymbolCounts routeCounts = PathSymbolCounts.fromNodes(best);
+        PathSymbolCounts routeCounts = NodePathSymbolCounts.fromNodes(best);
         act.summary.setRecommendedPlan(routeCounts, routeSymbols(best));
         logger.info("Act {} planned route (score {}): {}", act.actNumber, best.getValue(), best.toSymbolRoute());
     }

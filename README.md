@@ -83,7 +83,8 @@ Copy-Item -Force target\WeightedPaths.jar G:\sljt_101046\mods\WeightedPaths-dev.
 
 产物：`target/WeightedPaths.jar`
 > 换新机器构建：clone 后先跑 `scripts/setup-libs.ps1`（或设 `STS_GAME_JAR` 环境变量），依赖就位后即可 `mvn test` / `mvn package`。
-> CI（GitHub Actions）：ModTheSpire/BaseMod 随仓可直接用；游戏 jar 通过仓库 secret 提供（推荐 GitHub 私有 Release 附件，或任意私有直链），未配置时测试任务跳过。配置步骤见 [docs/CI-SETUP.md](docs/CI-SETUP.md)。
+> CI（GitHub Actions）：拆两个 job——pure-test 纯逻辑测试不依赖游戏 jar、永远跑（门禁永不空转）；game-test 全量测试需要游戏 jar，经仓库 secret 提供（推荐 GitHub 私有 Release 附件，或任意私有直链），未配置时只跳过 game-test。配置步骤见 [docs/CI-SETUP.md](docs/CI-SETUP.md)。
+> 已知问题（开放清单，唯一真源）见 [docs/KNOWN-ISSUES.md](docs/KNOWN-ISSUES.md)；换机恢复步骤见 [docs/RECOVERY.md](docs/RECOVERY.md)；进游戏实测见 [docs/PLAYTEST-CHECKLIST.md](docs/PLAYTEST-CHECKLIST.md)。
 
 ## 已知限制
 

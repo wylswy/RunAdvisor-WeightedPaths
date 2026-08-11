@@ -103,6 +103,28 @@ public class RecommendationPolicyTest {
     }
 
     @Test
+    public void trustFactor_grudge_compounds() {
+        assertEquals(0.90, RecommendationPolicy.trustFactor(0, true), 1e-9);
+        assertEquals(0.80 * 0.9, RecommendationPolicy.trustFactor(-3, true), 1e-9);
+        assertEquals(0.55 * 0.9, RecommendationPolicy.trustFactor(-7, true), 1e-9);
+        assertEquals(1.0, RecommendationPolicy.trustFactor(0, false), 1e-9);
+    }
+
+    @Test
+    public void decide_grudge_flipsCloseCall() {
+        // 最优 55 打 9 折 = 49.5 < 次优 52 → 记仇时推荐转向次优（偏保守）
+        List<AiRecommendationEngine.Candidate> cs = Arrays.asList(c("A", 55.0), c("B", 52.0));
+        RecommendationPolicy.Decision d = RecommendationPolicy.decide(cs, 0, true);
+        assertEquals("B", d.cardId);
+        assertTrue(d.trustAdjusted);
+        assertEquals(0.90, d.trustFactor, 1e-9);
+        // 非记仇时不翻转
+        RecommendationPolicy.Decision d2 = RecommendationPolicy.decide(cs, 0, false);
+        assertEquals("A", d2.cardId);
+        assertFalse(d2.trustAdjusted);
+    }
+
+    @Test
     public void decide_emptyOrNull_returnsEmptyDecision() {
         RecommendationPolicy.Decision d1 = RecommendationPolicy.decide(null, -5);
         assertFalse(d1.trustAdjusted);
