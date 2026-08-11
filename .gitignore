@@ -30,6 +30,8 @@ sendToDevs/
 # Build / deploy artifacts (jar built locally)
 *.jar
 !lib/*.jar
+# 游戏本体 jar：版权原因不进仓，用 scripts/setup-libs.ps1 从游戏安装目录获取
+lib/desktop-1.0.jar
 
 # Temp / scratch (not source)
 hr_main.js

@@ -71,11 +71,15 @@ python scripts/analyze_runs.py --csv runs.csv
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-8.0.492.9-hotspot"
 $env:Path = "C:\STS-Modding\apache-maven-3.9.6\bin;$env:JAVA_HOME\bin;" + $env:Path
 cd C:\STS-Modding\RunAdvisorMod\WeightedPaths
+# 首次构建前：确保依赖就位（ModTheSpire/BaseMod 随仓；游戏本体 jar 版权原因不进仓，需从游戏目录获取）
+.\scripts\setup-libs.ps1 -GameDir "C:\Program Files (x86)\Steam\steamapps\common\SlayTheSpire"
 mvn package -DskipTests
 Copy-Item -Force target\WeightedPaths.jar G:\sljt_101046\mods\WeightedPaths-dev.jar
 ```
 
 产物：`target/WeightedPaths.jar`
+> 换新机器构建：clone 后先跑 `scripts/setup-libs.ps1`（或设 `STS_GAME_JAR` 环境变量），依赖就位后即可 `mvn test` / `mvn package`。
+> CI（GitHub Actions）：ModTheSpire/BaseMod 随仓可直接用；游戏 jar 通过仓库 secret `STS_GAME_JAR_URL` 提供（私有 URL），未配置时测试任务跳过。
 
 ## 已知限制
 

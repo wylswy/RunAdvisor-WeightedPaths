@@ -24,21 +24,21 @@
             <artifactId>slaythespire</artifactId>
             <version>017</version>
             <scope>system</scope>
-            <systemPath>${basedir}/../lib/desktop-1.0.jar</systemPath>
+            <systemPath>${lib.dir}/desktop-1.0.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>com.evacipated.cardcrawl</groupId>
             <artifactId>ModTheSpire</artifactId>
             <version>3.26.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/../lib/ModTheSpire.jar</systemPath>
+            <systemPath>${lib.dir}/ModTheSpire.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>basemod</groupId>
             <artifactId>BaseMod</artifactId>
             <version>5.39.0</version>
             <scope>system</scope>
-            <systemPath>${basedir}/../lib/BaseMod.jar</systemPath>
+            <systemPath>${lib.dir}/BaseMod.jar</systemPath>
         </dependency>
         <dependency>
             <groupId>junit</groupId>
@@ -53,6 +53,8 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+        <!-- 依赖目录：ModTheSpire/BaseMod 随仓（lib/），游戏本体 jar 由 scripts/setup-libs.ps1 获取（gitignored） -->
+        <lib.dir>${basedir}/lib</lib.dir>
     </properties>
 
     <!-- This is how your code is packaged into the jar file-->
@@ -105,9 +107,9 @@
                     <!-- 游戏依赖为 system scope 本地文件，surefire 不将其加入测试 classpath，
                          这里显式把 jar 文件路径加入测试 classpath，使单测能加载 com.megacrit.cardcrawl.* 类。 -->
                     <additionalClasspathElements>
-                        <additionalClasspathElement>${basedir}/../lib/desktop-1.0.jar</additionalClasspathElement>
-                        <additionalClasspathElement>${basedir}/../lib/ModTheSpire.jar</additionalClasspathElement>
-                        <additionalClasspathElement>${basedir}/../lib/BaseMod.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${lib.dir}/desktop-1.0.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${lib.dir}/ModTheSpire.jar</additionalClasspathElement>
+                        <additionalClasspathElement>${lib.dir}/BaseMod.jar</additionalClasspathElement>
                     </additionalClasspathElements>
                 </configuration>
             </plugin>
