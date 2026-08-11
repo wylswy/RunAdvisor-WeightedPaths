@@ -9,6 +9,7 @@
 
 | 提交 | 变更 | 原因 |
 |------|------|------|
+| （8.11 交付文档同步 · 2026-08-11） | README 补「跟你打赌（契约/赌约）」与「AI 先查证再拍板」、依赖版本 3.26+、agent_log.json 轮转说明；ModTheSpire 描述同步契约/查证能力；打包验证通过并部署 `target/WeightedPaths.jar` → `G:\sljt_101046\mods\WeightedPaths-dev.jar` | 最终交付文档与产物一致 |
 | （本次收尾 · 2026-08-11） | 收尾接线闭环：修 3 处残留（PactManager 重复声明/游离行语法错误、CardRewardRenderPatch 缺 AiExecutor import、RunPersistenceTest 旧签名）；契约状态跨 SL 持久化（PactEngine/PactManager 导出-恢复 + run_state.json 落 pact 字段 + 新局重置/SL 恢复）；RunLifecyclePatch 胜负结算契约；AiExecutor 共享单线程 daemon 池替换 3 处 `new Thread`；agent_log.json 超 5MB 轮转保留一份历史；ModTheSpire.json 版本改由 pom 过滤注入（单一事实源）；CI-SETUP 文档测试数不写死；补 13 个测试（导出/恢复往返、非法数据降级、否定式拒绝、旧文件兼容） | 8.11 最终交付前收尾：编译/测试全绿，契约与 agent 功能完整；246 测试全过 |
 | e4a7f1e | 契约/赌约接线完成：PactManager 接线层（提案消息/聊天接受拒绝/好感度应用/奖励发放+保守建议标志），挂 4 个游戏钩子——地图打开幕切换结算+新幕提案、进精英房结算 REACH_ELITE、抓攻击牌违背检测、聊天框接受/拒绝关键词；CardMoodEngine 新增 adjustFavor（夹紧 -10..10）；奖励真实生效：REVEAL_NEXT_ELITE 报精英距离+前方路线、CONSERVATIVE_ADVICE 提高卡奖跳过阈值 5 分 | 契约从纯引擎接入真实游戏流程；233 测试全过 |
 | ebd6165 | 机制层第二块：契约/赌约引擎 PactEngine——状态机 OFFERED→ACCEPTED→COMPLETED/VIOLATED；两类条件（不抓攻击牌/50% 血到精英）与两类奖励（揭精英/保守建议）；事件驱动（抓牌/到精英/幕结束），完成 +2 好感/违背 -2，奖励只发一次；纯逻辑确定性，与 CardMoodEngine 联动由调用方执行 | 卡提出有后果的新决策（原版不存在的选择空间）；219 测试全过 |

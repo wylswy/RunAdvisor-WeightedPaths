@@ -2,7 +2,7 @@
   "modid": "WeightedPaths",
   "name": "Run Advisor",
   "author_list": ["Derek Jass"],
-  "description": "地图最优路线、种子各幕预览、静默猎手 A20 卡奖推荐（1.5.0：AI 拍板推荐+卡会记得你/会记仇/会陪你聊天）。基于 Weighted Paths。",
+  "description": "地图最优路线、种子各幕预览、静默猎手 A20 卡奖推荐（1.5.0：AI 先查证再拍板推荐+卡会记得你/会记仇/会陪你聊天/会跟你打赌）。基于 Weighted Paths。",
   "version": "${project.version}",
   "sts_version": "03-07-2022",
   "mts_version": "3.26.0",
