@@ -10,6 +10,8 @@ jobs:
     name: mvn test
     runs-on: ubuntu-latest
     env:
+      GH_ASSETS_TOKEN: ${{ secrets.GH_ASSETS_TOKEN }}
+      ASSETS_REPO: ${{ secrets.ASSETS_REPO }}
       STS_GAME_JAR_URL: ${{ secrets.STS_GAME_JAR_URL }}
     steps:
       - uses: actions/checkout@v4
@@ -18,12 +20,17 @@ jobs:
           distribution: temurin
           java-version: '8'
           cache: maven
-      - name: Fetch game jar
-        if: env.STS_GAME_JAR_URL != ''
+      - name: Fetch game jar (GitHub private release asset)
+        if: env.GH_ASSETS_TOKEN != '' && env.ASSETS_REPO != ''
+        run: |
+          ASSET_URL="$(curl -fsSL -H "Authorization: Bearer ${GH_ASSETS_TOKEN}" "https://api.github.com/repos/${ASSETS_REPO}/releases/latest" | python3 -c "import sys,json;d=json.load(sys.stdin);print(d['assets'][0]['url'])")"
+          curl -fsSL -H "Authorization: Bearer ${GH_ASSETS_TOKEN}" -H "Accept: application/octet-stream" "${ASSET_URL}" -o lib/desktop-1.0.jar
+      - name: Fetch game jar (plain URL)
+        if: env.GH_ASSETS_TOKEN == '' && env.STS_GAME_JAR_URL != ''
         run: curl -fsSL "$STS_GAME_JAR_URL" -o lib/desktop-1.0.jar
       - name: Run tests
-        if: env.STS_GAME_JAR_URL != ''
+        if: env.GH_ASSETS_TOKEN != '' || env.STS_GAME_JAR_URL != ''
         run: mvn -B test
       - name: Notice when game jar unavailable
-        if: env.STS_GAME_JAR_URL == ''
-        run: echo "::notice::未配置 STS_GAME_JAR_URL secret，跳过游戏依赖测试。配置方法：将 desktop-1.0.jar 上传到任意私有 URL，在仓库 Settings -> Secrets 添加同名 secret。"
+        if: env.GH_ASSETS_TOKEN == '' && env.STS_GAME_JAR_URL == ''
+        run: echo "::notice::未配置 GH_ASSETS_TOKEN/ASSETS_REPO 或 STS_GAME_JAR_URL，跳过游戏依赖测试。配置方法见 docs/CI-SETUP.md。"

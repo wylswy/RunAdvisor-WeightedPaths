@@ -80,7 +80,7 @@ Copy-Item -Force target\WeightedPaths.jar G:\sljt_101046\mods\WeightedPaths-dev.
 
 产物：`target/WeightedPaths.jar`
 > 换新机器构建：clone 后先跑 `scripts/setup-libs.ps1`（或设 `STS_GAME_JAR` 环境变量），依赖就位后即可 `mvn test` / `mvn package`。
-> CI（GitHub Actions）：ModTheSpire/BaseMod 随仓可直接用；游戏 jar 通过仓库 secret `STS_GAME_JAR_URL` 提供（私有 URL），未配置时测试任务跳过。
+> CI（GitHub Actions）：ModTheSpire/BaseMod 随仓可直接用；游戏 jar 通过仓库 secret 提供（推荐 GitHub 私有 Release 附件，或任意私有直链），未配置时测试任务跳过。配置步骤见 [docs/CI-SETUP.md](docs/CI-SETUP.md)。
 
 ## 已知限制
 
